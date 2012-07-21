@@ -16,39 +16,21 @@
 #define MAX_COLLECTIVE 1000      // 95
 /*** END DEFINES ***/
 
-
-/*** BEGIN VARIABLES ***/
-extern int16_t RxInRoll;
-extern int16_t RxInPitch;
-extern int16_t RxInCollective;
-extern int16_t RxInYaw;
-
-extern uint16_t RxChannel1;
-extern uint16_t RxChannel2;
-extern uint16_t RxChannel3;
-extern uint16_t RxChannel4;
-
-register uint16_t i_tmp asm("r2");               // ISR vars
-register uint16_t RxChannel1Start asm("r4");
-register uint16_t RxChannel2Start asm("r6");
-register uint16_t RxChannel3Start asm("r8");
-register uint16_t RxChannel4Start asm("r10");
-register uint8_t i_sreg asm("r12");
-
+/*** BEGIN TYPES ***/
+struct RX_STATE_S{
+	int16_t roll;
+	int16_t pitch;
+	int16_t collective;
+	int16_t yaw;
 #ifdef TWIN_COPTER
-extern int16_t RxInOrgPitch;
+	int16_t orgPitch;
 #endif
-/*** END VARIABLES ***/
+};
+/*** END TYPES ***/
 
 /*** BEGIN PROTOTYPES ***/
-ISR(PCINT2_vect, ISR_NAKED);
-ISR(INT0_vect, ISR_NAKED);
-ISR(INT1_vect, ISR_NAKED);
-ISR(PCINT0_vect, ISR_NAKED);
-
 void receiverSetup(void);
-int16_t fastdiv8(int16_t x);
-void RxGetChannels(void);
+void receiverGetChannels(struct RX_STATE_S *state);
 void receiverStickCenter(void);
 /*** END PROTOTYPES ***/
 

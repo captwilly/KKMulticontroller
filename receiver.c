@@ -1,24 +1,31 @@
 #include "receiver.h"
 
-/*** BEGIN VARIABLES ***/
-int16_t RxInRoll;
-int16_t RxInPitch;
-int16_t RxInCollective;
-int16_t RxInYaw;
+/*** BEGIN PROTOTYPES ***/
+ISR(PCINT2_vect, ISR_NAKED);
+ISR(INT0_vect, ISR_NAKED);
+ISR(INT1_vect, ISR_NAKED);
+ISR(PCINT0_vect, ISR_NAKED);
 
+static int16_t fastdiv8(int16_t x);
+/*** END PROTOTYPES ***/
+
+/*** BEGIN VARIABLES ***/
 /*
  * Careful! Making these volatile makes it spew r24 crap in the _middle_ of
  * asm volatile statements. Always check assembler output of interrupt
  * routines.
  */
-uint16_t RxChannel1;
-uint16_t RxChannel2;
-uint16_t RxChannel3;
-uint16_t RxChannel4;
+static uint16_t RxChannel1;
+static uint16_t RxChannel2;
+static uint16_t RxChannel3;
+static uint16_t RxChannel4;
 
-#ifdef TWIN_COPTER
-int16_t RxInOrgPitch;
-#endif
+register uint16_t i_tmp asm("r2");               // ISR vars
+register uint16_t RxChannel1Start asm("r4");
+register uint16_t RxChannel2Start asm("r6");
+register uint16_t RxChannel3Start asm("r8");
+register uint16_t RxChannel4Start asm("r10");
+register uint8_t i_sreg asm("r12");
 /*** END VARIABLES ***/
 
 /*** BEGIN RECEIVER INTERRUPTS ***/
@@ -166,27 +173,28 @@ int16_t fastdiv8(int16_t x) {
  * reordering it to be unsafe other than by doing the set in inline
  * assembler with a memory barrier.
  */
-void RxGetChannels()
+void receiverGetChannels(struct RX_STATE_S *state)
 {
   uint8_t t = 0xff;
   do {
     asm volatile("mov %0, %1":"=r" (i_sreg),"=r" (t)::"memory");
-    RxInRoll = fastdiv8(RxChannel1 - 1520 * 8);
-    RxInPitch = fastdiv8(RxChannel2 - 1520 * 8);
-    RxInCollective = fastdiv8(RxChannel3 - 1120 * 8);
-    RxInYaw = fastdiv8(RxChannel4 - 1520 * 8);
+    state->roll = fastdiv8(RxChannel1 - 1520 * 8);
+    state->pitch = fastdiv8(RxChannel2 - 1520 * 8);
+    state->collective = fastdiv8(RxChannel3 - 1120 * 8);
+    state->yaw = fastdiv8(RxChannel4 - 1520 * 8);
   } while(i_sreg != t);
 #ifdef TWIN_COPTER
-  RxInOrgPitch = RxInPitch;
+  state->orgPitch = state->pitch;
 #endif
 }
 
 void receiverStickCenter()
 {
+  struct RX_STATE_S rxState;
   uint8_t i;
   while(1) {
-    RxGetChannels();
-    i = abs(RxInRoll) + abs(RxInPitch) + abs(RxInYaw);
+    receiverGetChannels(&rxState);
+    i = abs(rxState.roll) + abs(rxState.pitch) + abs(rxState.yaw);
     LED = 1;
     while(i) {
       LED = 0;

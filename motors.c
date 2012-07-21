@@ -379,6 +379,7 @@ void motorsIdentify()
 void motorsThrottleCalibration()
 {
   struct MT_STATE_S motors;
+  struct RX_STATE_S rxState;
 
   // flash LED 3 times
   for(uint8_t i = 0;i < 3;i++) {
@@ -389,42 +390,42 @@ void motorsThrottleCalibration()
   }
 
   while(1) {
-    RxGetChannels();
+    receiverGetChannels(&rxState);
 #ifdef SINGLE_COPTER
-    motors.m1out = RxInCollective;
+    motors.m1out = rxState.collective;
     motors.m2out = 1400;    // Center: 140
     motors.m3out = 1400;
     motors.m4out = 1400;
     motors.m5out = 1400;
 #elif defined(DUAL_COPTER)
-    motors.m1out = RxInCollective;
-    motors.m2out = RxInCollective;
+    motors.m1out = rxState.collective;
+    motors.m2out = rxState.collective;
     motors.m3out = 500;    // Center: 50
     motors.m4out = 500;
 #elif defined(TWIN_COPTER)
-    motors.m1out = RxInCollective;
-    motors.m2out = RxInCollective;
+    motors.m1out = rxState.collective;
+    motors.m2out = rxState.collective;
     motors.m3out = 500;    // Center: 50
     motors.m4out = 500;
     motors.m5out = 500;
     motors.m6out = 500;    // Center: 50, Reverse
 #elif defined(TRI_COPTER)
-    motors.m1out = RxInCollective;
-    motors.m2out = RxInCollective;
-    motors.m3out = RxInCollective;
-    motors.m4out = 500+RxInYaw*2;    // Center: 50
+    motors.m1out = rxState.collective;
+    motors.m2out = rxState.collective;
+    motors.m3out = rxState.collective;
+    motors.m4out = 500 + rxState.yaw * 2;    // Center: 50
 #elif defined(QUAD_COPTER) || defined(QUAD_X_COPTER) || defined(Y4_COPTER)
-    motors.m1out = RxInCollective;
-    motors.m2out = RxInCollective;
-    motors.m3out = RxInCollective;
-    motors.m4out = RxInCollective;
+    motors.m1out = rxState.collective;
+    motors.m2out = rxState.collective;
+    motors.m3out = rxState.collective;
+    motors.m4out = rxState.collective;
 #elif defined(HEX_COPTER) ||  defined(Y6_COPTER)
-    motors.m1out = RxInCollective;
-    motors.m2out = RxInCollective;
-    motors.m3out = RxInCollective;
-    motors.m4out = RxInCollective;
-    motors.m5out = RxInCollective;
-    motors.m6out = RxInCollective;
+    motors.m1out = rxState.collective;
+    motors.m2out = rxState.collective;
+    motors.m3out = rxState.collective;
+    motors.m4out = rxState.collective;
+    motors.m5out = rxState.collective;
+    motors.m6out = rxState.collective;
 #else
 #error No Copter configuration defined !!!!
 #endif

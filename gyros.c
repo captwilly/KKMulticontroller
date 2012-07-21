@@ -95,6 +95,8 @@ void CalibrateGyros()
 
 void gyrosReverse()
 {
+  struct RX_STATE_S rxState;
+
   // flash LED 3 times
   for(uint8_t i = 0;i < 3;i++) {
     LED = 1;
@@ -104,29 +106,29 @@ void gyrosReverse()
   }
 
   while(1) {
-    RxGetChannels();
+    receiverGetChannels(&rxState);
 
-    if(RxInRoll < -STICK_THROW) {  // normal(left)
+    if(rxState.roll < -STICK_THROW) {  // normal(left)
       Config.RollGyroDirection = GYRO_NORMAL;
       Save_Config_to_EEPROM();
       LED = 1;
-    } if(RxInRoll > STICK_THROW) {  // reverse(right)
+    } if(rxState.roll > STICK_THROW) {  // reverse(right)
       Config.RollGyroDirection = GYRO_REVERSED;
       Save_Config_to_EEPROM();
       LED = 1;
-    } else if(RxInPitch < -STICK_THROW) { // normal(up)
+    } else if(rxState.pitch < -STICK_THROW) { // normal(up)
       Config.PitchGyroDirection = GYRO_NORMAL;
       Save_Config_to_EEPROM();
       LED = 1;
-    } else if(RxInPitch > STICK_THROW) { // reverse(down)
+    } else if(rxState.pitch > STICK_THROW) { // reverse(down)
       Config.PitchGyroDirection = GYRO_REVERSED;
       Save_Config_to_EEPROM();
       LED = 1;
-    } else if(RxInYaw < -STICK_THROW) { // normal(left)
+    } else if(rxState.yaw < -STICK_THROW) { // normal(left)
       Config.YawGyroDirection = GYRO_NORMAL;
       Save_Config_to_EEPROM();
       LED = 1;
-    } else if(RxInYaw > STICK_THROW) { // reverse(right)
+    } else if(rxState.yaw > STICK_THROW) { // reverse(right)
       Config.YawGyroDirection = GYRO_REVERSED;
       Save_Config_to_EEPROM();
       LED = 1;

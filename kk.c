@@ -72,19 +72,20 @@ static inline void loop()
   int16_t error, emax = 1023;
   int16_t imax, derivative;
   struct MT_STATE_S motors;
+  struct RX_STATE_S rxState;
 
-  RxGetChannels();
+  receiverGetChannels(&rxState);
 
-  if(RxInCollective <= 0) {
+  if(rxState.collective <= 0) {
     // Check for stick arming (Timer2 at 8MHz/1024 = 7812.5KHz)
     Change_Arming += (uint8_t)(TCNT2 - Arming_TCNT2);
     Arming_TCNT2 = TCNT2;
 
     if(Armed) {
-      if(RxInYaw < STICK_THROW || abs(RxInPitch) > STICK_THROW)
+      if(rxState.yaw < STICK_THROW || abs(rxState.pitch) > STICK_THROW)
         Change_Arming = 0;    // re-set count
     } else {
-      if(RxInYaw > -STICK_THROW || abs(RxInPitch) > STICK_THROW)
+      if(rxState.yaw > -STICK_THROW || abs(rxState.pitch) > STICK_THROW)
         Change_Arming = 0;    // re-set count
     }
 
@@ -108,70 +109,70 @@ static inline void loop()
 
   //--- Start mixing by setting collective to motor outputs
 
-  RxInCollective = (RxInCollective * 10) >> 3;  // 0-800 -> 0-1000
+  rxState.collective = (rxState.collective * 10) >> 3;  // 0-800 -> 0-1000
 
 #ifndef SINGLE_COPTER
-  if(RxInCollective > MAX_COLLECTIVE)
-    RxInCollective = MAX_COLLECTIVE;
+  if(rxState.collective > MAX_COLLECTIVE)
+    rxState.collective = MAX_COLLECTIVE;
 #endif
 
 #ifdef SINGLE_COPTER
-  motors.m1out = RxInCollective;
+  motors.m1out = rxState.collective;
   motors.m2out = 840;  // 840
   motors.m3out = 840;  // 840
   motors.m4out = 945;  // 840 + 840/8
   motors.m5out = 945;  // 840 + 840/8
 #elif defined(DUAL_COPTER)
-  motors.m1out = RxInCollective;
-  motors.m2out = RxInCollective;
+  motors.m1out = rxState.collective;
+  motors.m2out = rxState.collective;
   motors.m3out = 500;
   motors.m4out = 500;
 #elif defined(TWIN_COPTER)
-  motors.m1out = RxInCollective;
-  motors.m2out = RxInCollective;
+  motors.m1out = rxState.collective;
+  motors.m2out = rxState.collective;
   motors.m3out = 500;
   motors.m4out = 500;
   motors.m5out = 500;  // Optional
   motors.m6out = 500;  // Optional
 #elif defined(TRI_COPTER)
-  motors.m1out = RxInCollective;
-  motors.m2out = RxInCollective;
-  motors.m3out = RxInCollective;
+  motors.m1out = rxState.collective;
+  motors.m2out = rxState.collective;
+  motors.m3out = rxState.collective;
   motors.m4out = 500;
 #elif defined(QUAD_COPTER) || defined(QUAD_X_COPTER)
-  motors.m1out = RxInCollective;
-  motors.m2out = RxInCollective;
-  motors.m3out = RxInCollective;
-  motors.m4out = RxInCollective;
+  motors.m1out = rxState.collective;
+  motors.m2out = rxState.collective;
+  motors.m3out = rxState.collective;
+  motors.m4out = rxState.collective;
 #elif defined(Y4_COPTER)
-  motors.m1out = RxInCollective;
-  motors.m2out = RxInCollective;
-  motors.m3out = RxInCollective * 3 / 4;    // 25% Down
-  motors.m4out = RxInCollective * 3 / 4;    // 25% Down
+  motors.m1out = rxState.collective;
+  motors.m2out = rxState.collective;
+  motors.m3out = rxState.collective * 3 / 4;    // 25% Down
+  motors.m4out = rxState.collective * 3 / 4;    // 25% Down
 #elif defined(HEX_COPTER) ||  defined(Y6_COPTER)
-  motors.m1out = RxInCollective;
-  motors.m2out = RxInCollective;
-  motors.m3out = RxInCollective;
-  motors.m4out = RxInCollective;
-  motors.m5out = RxInCollective;
-  motors.m6out = RxInCollective;
+  motors.m1out = rxState.collective;
+  motors.m2out = rxState.collective;
+  motors.m3out = rxState.collective;
+  motors.m4out = rxState.collective;
+  motors.m5out = rxState.collective;
+  motors.m6out = rxState.collective;
 #endif
 
-  imax = RxInCollective;
+  imax = rxState.collective;
   if(imax < 0)
     imax = 0;
   imax>>= 3;  /* 1000 -> 200 */
 
   /* Calculate roll output - Test without props!! */
 
-  RxInRoll = ((int32_t)RxInRoll * (uint32_t)GainInADC[ROLL]) >> STICK_GAIN_SHIFT;
+  rxState.roll = ((int32_t)rxState.roll * (uint32_t)GainInADC[ROLL]) >> STICK_GAIN_SHIFT;
   gyroADC[ROLL] = ((int32_t)gyroADC[ROLL] * (uint32_t)GainInADC[ROLL]) >> GYRO_GAIN_SHIFT;
   if(Config.RollGyroDirection == GYRO_NORMAL)
     gyroADC[ROLL] = -gyroADC[ROLL];
 
   if(Armed) {
     if(0) {
-      error = RxInRoll - gyroADC[ROLL];
+      error = rxState.roll - gyroADC[ROLL];
       if(error > emax)
         error = emax;
       else if(error < -emax)
@@ -183,62 +184,62 @@ static inline void loop()
         integral[ROLL] = -imax;
       derivative = error - last_error[ROLL];
       last_error[ROLL] = error;
-      RxInRoll += error + (integral[ROLL] >> 2) + (derivative >> 2);
+      rxState.roll += error + (integral[ROLL] >> 2) + (derivative >> 2);
     } else {
-      RxInRoll -= gyroADC[ROLL];
+      rxState.roll -= gyroADC[ROLL];
     }
   }
 
 #ifdef SINGLE_COPTER
-  motors.m2out += RxInRoll;
-  motors.m4out -= RxInRoll;
+  motors.m2out += rxState.roll;
+  motors.m4out -= rxState.roll;
 #elif defined(DUAL_COPTER)
-  motors.m4out += RxInRoll;
+  motors.m4out += rxState.roll;
 #elif defined(TWIN_COPTER)
-  RxInRoll = (RxInRoll * 7) >> 3;  // Approximation of sin(60) without div
-  motors.m1out += RxInRoll;
-  motors.m2out -= RxInRoll;
+  rxState.roll = (rxState.roll * 7) >> 3;  // Approximation of sin(60) without div
+  motors.m1out += rxState.roll;
+  motors.m2out -= rxState.roll;
 #elif defined(TRI_COPTER)
-  RxInRoll = (RxInRoll * 7) >> 3;  // (.875 versus .86602540)
-  motors.m1out += RxInRoll;
-  motors.m2out -= RxInRoll;
+  rxState.roll = (rxState.roll * 7) >> 3;  // (.875 versus .86602540)
+  motors.m1out += rxState.roll;
+  motors.m2out -= rxState.roll;
 #elif defined(QUAD_COPTER)
-  motors.m2out += RxInRoll;
-  motors.m3out -= RxInRoll;
+  motors.m2out += rxState.roll;
+  motors.m3out -= rxState.roll;
 #elif defined(QUAD_X_COPTER)
-  RxInRoll = RxInRoll >> 1;
-  motors.m1out += RxInRoll;
-  motors.m2out -= RxInRoll;
-  motors.m3out -= RxInRoll;
-  motors.m4out += RxInRoll;
+  rxState.roll = rxState.roll >> 1;
+  motors.m1out += rxState.roll;
+  motors.m2out -= rxState.roll;
+  motors.m3out -= rxState.roll;
+  motors.m4out += rxState.roll;
 #elif defined(Y4_COPTER)
-  RxInRoll = (RxInRoll * 7) >> 3;
-  motors.m1out += RxInRoll;
-  motors.m2out -= RxInRoll;
+  rxState.roll = (rxState.roll * 7) >> 3;
+  motors.m1out += rxState.roll;
+  motors.m2out -= rxState.roll;
 #elif defined(HEX_COPTER)
-  RxInRoll = (RxInRoll * 7) >> 3;
-  motors.m2out -= RxInRoll;
-  motors.m3out -= RxInRoll;
-  motors.m5out += RxInRoll;
-  motors.m6out += RxInRoll;
+  rxState.roll = (rxState.roll * 7) >> 3;
+  motors.m2out -= rxState.roll;
+  motors.m3out -= rxState.roll;
+  motors.m5out += rxState.roll;
+  motors.m6out += rxState.roll;
 #elif defined(Y6_COPTER)
-  RxInRoll = (RxInRoll * 7) >> 3;
-  motors.m1out += RxInRoll;
-  motors.m2out += RxInRoll;
-  motors.m3out -= RxInRoll;
-  motors.m4out -= RxInRoll;
+  rxState.roll = (rxState.roll * 7) >> 3;
+  motors.m1out += rxState.roll;
+  motors.m2out += rxState.roll;
+  motors.m3out -= rxState.roll;
+  motors.m4out -= rxState.roll;
 #endif
 
   /* Calculate pitch output - Test without props!! */
 
-  RxInPitch = ((int32_t)RxInPitch * (uint32_t)GainInADC[PITCH]) >> STICK_GAIN_SHIFT;
+  rxState.pitch = ((int32_t)rxState.pitch * (uint32_t)GainInADC[PITCH]) >> STICK_GAIN_SHIFT;
   gyroADC[PITCH] = ((int32_t)gyroADC[PITCH] * (uint32_t)GainInADC[PITCH]) >> GYRO_GAIN_SHIFT;
   if(Config.PitchGyroDirection == GYRO_NORMAL)
     gyroADC[PITCH] = -gyroADC[PITCH];
 
   if(Armed) {
     if(0) {
-      error = RxInPitch - gyroADC[PITCH];
+      error = rxState.pitch - gyroADC[PITCH];
       if(error > emax)
         error = emax;
       else if(error < -emax)
@@ -250,70 +251,70 @@ static inline void loop()
         integral[PITCH] = -imax;
       derivative = error - last_error[PITCH];
       last_error[PITCH] = error;
-      RxInPitch += error + (integral[PITCH] >> 2) + (derivative >> 2);
+      rxState.pitch += error + (integral[PITCH] >> 2) + (derivative >> 2);
     } else {
-      RxInPitch -= gyroADC[PITCH];
+      rxState.pitch -= gyroADC[PITCH];
     }
   }
 
 #ifdef SINGLE_COPTER
-  motors.m3out += RxInPitch;
-  motors.m5out -= RxInPitch;
+  motors.m3out += rxState.pitch;
+  motors.m5out -= rxState.pitch;
 #elif defined(DUAL_COPTER)
-  motors.m3out += RxInPitch;
+  motors.m3out += rxState.pitch;
 #elif defined(TWIN_COPTER)
-  motors.m3out -= SERVO_REVERSE RxInPitch;
-  motors.m4out += SERVO_REVERSE RxInPitch;
+  motors.m3out -= SERVO_REVERSE rxState.pitch;
+  motors.m4out += SERVO_REVERSE rxState.pitch;
   // Stick Only, Optional
-  RxInOrgPitch = abs(RxInOrgPitch);
-  motors.m5out += RxInOrgPitch;      // Tain Servo-Optional, Down Only
-  motors.m6out -= RxInOrgPitch;      // Tain Servo-Optional, Down Only (Reverse)
+  rxState.orgPitch = abs(rxState.orgPitch);
+  motors.m5out += rxState.orgPitch;      // Tain Servo-Optional, Down Only
+  motors.m6out -= rxState.orgPitch;      // Tain Servo-Optional, Down Only (Reverse)
 #elif defined(TRI_COPTER)
-  motors.m3out -= RxInPitch;
-  RxInPitch = (RxInPitch >> 1);      // cosine of 60
-  motors.m1out += RxInPitch;
-  motors.m2out += RxInPitch;
+  motors.m3out -= rxState.pitch;
+  rxState.pitch = (rxState.pitch >> 1);      // cosine of 60
+  motors.m1out += rxState.pitch;
+  motors.m2out += rxState.pitch;
 #elif defined(QUAD_COPTER)
-  motors.m1out += RxInPitch;
-  motors.m4out -= RxInPitch;
+  motors.m1out += rxState.pitch;
+  motors.m4out -= rxState.pitch;
 #elif defined(QUAD_X_COPTER)
-  RxInPitch = (RxInPitch >> 1);      // cosine of 60
-  motors.m1out += RxInPitch;
-  motors.m2out += RxInPitch;
-  motors.m3out -= RxInPitch;
-  motors.m4out -= RxInPitch;
+  rxState.pitch = (rxState.pitch >> 1);      // cosine of 60
+  motors.m1out += rxState.pitch;
+  motors.m2out += rxState.pitch;
+  motors.m3out -= rxState.pitch;
+  motors.m4out -= rxState.pitch;
 #elif defined(Y4_COPTER)
-  motors.m1out += RxInPitch;
-  motors.m2out += RxInPitch;
-  motors.m3out -= RxInPitch;
-  motors.m4out -= RxInPitch;
+  motors.m1out += rxState.pitch;
+  motors.m2out += rxState.pitch;
+  motors.m3out -= rxState.pitch;
+  motors.m4out -= rxState.pitch;
 #elif defined(HEX_COPTER)
-  motors.m1out += RxInPitch;
-  motors.m4out -= RxInPitch;
-  RxInPitch = (RxInPitch >> 2);
-  motors.m2out += RxInPitch;
-  motors.m3out -= RxInPitch;
-  motors.m5out -= RxInPitch;
-  motors.m6out += RxInPitch;
+  motors.m1out += rxState.pitch;
+  motors.m4out -= rxState.pitch;
+  rxState.pitch = (rxState.pitch >> 2);
+  motors.m2out += rxState.pitch;
+  motors.m3out -= rxState.pitch;
+  motors.m5out -= rxState.pitch;
+  motors.m6out += rxState.pitch;
 #elif defined(Y6_COPTER)
-  motors.m5out -= RxInPitch;
-  motors.m6out -= RxInPitch;
-  RxInPitch = (RxInPitch >> 1);      // cosine of 60
-  motors.m1out += RxInPitch;
-  motors.m2out += RxInPitch;
-  motors.m3out += RxInPitch;
-  motors.m4out += RxInPitch;
+  motors.m5out -= rxState.pitch;
+  motors.m6out -= rxState.pitch;
+  rxState.pitch = (rxState.pitch >> 1);      // cosine of 60
+  motors.m1out += rxState.pitch;
+  motors.m2out += rxState.pitch;
+  motors.m3out += rxState.pitch;
+  motors.m4out += rxState.pitch;
 #endif
 
   /* Calculate yaw output - Test without props!! */
 
-  RxInYaw = ((int32_t)RxInYaw * (uint32_t)GainInADC[YAW]) >> STICK_GAIN_SHIFT;
+  rxState.yaw = ((int32_t)rxState.yaw * (uint32_t)GainInADC[YAW]) >> STICK_GAIN_SHIFT;
   gyroADC[YAW] = ((int32_t)gyroADC[YAW] * (uint32_t)GainInADC[YAW]) >> GYRO_GAIN_SHIFT;
   if(Config.YawGyroDirection == GYRO_NORMAL)
     gyroADC[YAW] = -gyroADC[YAW];
 
   if(Armed) {
-    error = RxInYaw - gyroADC[YAW];
+    error = rxState.yaw - gyroADC[YAW];
     if(error > emax)
       error = emax;
     else if(error < -emax)
@@ -325,59 +326,59 @@ static inline void loop()
       integral[YAW] = -imax;
     derivative = error - last_error[YAW];
     last_error[YAW] = error;
-    RxInYaw += error + (integral[YAW] >> 4) + (derivative >> 4);
+    rxState.yaw += error + (integral[YAW] >> 4) + (derivative >> 4);
   }
 
 #ifdef SINGLE_COPTER
-  motors.m2out += RxInYaw;
-  motors.m3out += RxInYaw;
-  motors.m4out += RxInYaw;
-  motors.m5out += RxInYaw;
+  motors.m2out += rxState.yaw;
+  motors.m3out += rxState.yaw;
+  motors.m4out += rxState.yaw;
+  motors.m5out += rxState.yaw;
 #elif defined(DUAL_COPTER)
-  motors.m1out -= RxInYaw;
-  motors.m2out += RxInYaw;
+  motors.m1out -= rxState.yaw;
+  motors.m2out += rxState.yaw;
 #elif defined(TWIN_COPTER)
-  motors.m3out += SERVO_REVERSE(RxInYaw >> 1);
-  motors.m4out += SERVO_REVERSE(RxInYaw >> 1);
+  motors.m3out += SERVO_REVERSE(rxState.yaw >> 1);
+  motors.m4out += SERVO_REVERSE(rxState.yaw >> 1);
 #elif defined(TRI_COPTER)
-  motors.m4out += SERVO_REVERSE RxInYaw;
+  motors.m4out += SERVO_REVERSE rxState.yaw;
 #elif defined(QUAD_COPTER)
-  motors.m1out -= RxInYaw;
-  motors.m2out += RxInYaw;
-  motors.m3out += RxInYaw;
-  motors.m4out -= RxInYaw;
+  motors.m1out -= rxState.yaw;
+  motors.m2out += rxState.yaw;
+  motors.m3out += rxState.yaw;
+  motors.m4out -= rxState.yaw;
 #elif defined(QUAD_X_COPTER)
-  motors.m1out -= RxInYaw;
-  motors.m2out += RxInYaw;
-  motors.m3out -= RxInYaw;
-  motors.m4out += RxInYaw;
+  motors.m1out -= rxState.yaw;
+  motors.m2out += rxState.yaw;
+  motors.m3out -= rxState.yaw;
+  motors.m4out += rxState.yaw;
 #elif defined(Y4_COPTER)
-  if((motors.m3out - RxInYaw) < 100)
-    RxInYaw = motors.m3out - 100;  // Yaw Range Limit
-  if((motors.m3out - RxInYaw) > 1000)
-    RxInYaw = motors.m3out - 1000;  // Yaw Range Limit
+  if((motors.m3out - rxState.yaw) < 100)
+    rxState.yaw = motors.m3out - 100;  // Yaw Range Limit
+  if((motors.m3out - rxState.yaw) > 1000)
+    rxState.yaw = motors.m3out - 1000;  // Yaw Range Limit
 
-  if((motors.m4out + RxInYaw) < 100)
-    RxInYaw = 100 - motors.m4out;  // Yaw Range Limit
-  if((motors.m4out + RxInYaw) > 1000)
-    RxInYaw = 1000 - motors.m4out;  // Yaw Range Limit
+  if((motors.m4out + rxState.yaw) < 100)
+    rxState.yaw = 100 - motors.m4out;  // Yaw Range Limit
+  if((motors.m4out + rxState.yaw) > 1000)
+    rxState.yaw = 1000 - motors.m4out;  // Yaw Range Limit
 
-  motors.m3out -= RxInYaw;
-  motors.m4out += RxInYaw;
+  motors.m3out -= rxState.yaw;
+  motors.m4out += rxState.yaw;
 #elif defined(HEX_COPTER)
-  motors.m1out -= RxInYaw;
-  motors.m2out += RxInYaw;
-  motors.m3out -= RxInYaw;
-  motors.m4out += RxInYaw;
-  motors.m5out -= RxInYaw;
-  motors.m6out += RxInYaw;
+  motors.m1out -= rxState.yaw;
+  motors.m2out += rxState.yaw;
+  motors.m3out -= rxState.yaw;
+  motors.m4out += rxState.yaw;
+  motors.m5out -= rxState.yaw;
+  motors.m6out += rxState.yaw;
 #elif defined(Y6_COPTER)
-  motors.m1out -= RxInYaw;
-  motors.m4out -= RxInYaw;
-  motors.m5out -= RxInYaw;
-  motors.m2out += RxInYaw;
-  motors.m3out += RxInYaw;
-  motors.m6out += RxInYaw;
+  motors.m1out -= rxState.yaw;
+  motors.m4out -= rxState.yaw;
+  motors.m5out -= rxState.yaw;
+  motors.m2out += rxState.yaw;
+  motors.m3out += rxState.yaw;
+  motors.m6out += rxState.yaw;
 #endif
 
 #if defined(TRI_COPTER)
@@ -422,7 +423,7 @@ static inline void loop()
 #endif
 
   //--- Output to motor ESC's ---
-  if(RxInCollective < 1 || !Armed) {
+  if(rxState.collective < 1 || !Armed) {
     /* turn off motors unless armed and collective is non-zero */
 #ifdef SINGLE_COPTER
     motors.m1out = 0;
