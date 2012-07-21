@@ -88,25 +88,23 @@ void motorOutputPPM(struct MT_STATE_S *state)
   state->m2out+= t;
   state->m3out+= t;
   state->m4out+= t;
+#if M5_USED
   state->m5out+= t;
+#endif
+#if M6_USED
   state->m6out+= t;
+#endif
 #endif
 
   state->m1out<<= 3;
   state->m2out<<= 3;
   state->m3out<<= 3;
   state->m4out<<= 3;
+#if M5_USED
   state->m5out<<= 3;
+#endif
+#if M6_USED
   state->m6out<<= 3;
-
-  /*
-   * Mirror M3, M4 to M5, M6, when possible, for hardware PPM
-   * support. The compiler will throw away the above operations on
-   * M5 and M6 when it sees these.
-   */
-#if defined(DUAL_COPTER) || defined(TRI_COPTER) || defined(QUAD_COPTER) || defined(QUAD_X_COPTER) || defined(Y4_COPTER)
-  state->m5out = state->m3out;
-  state->m6out = state->m4out;
 #endif
 
   /*
@@ -163,8 +161,16 @@ void motorOutputPPM(struct MT_STATE_S *state)
    *
    * We hope that TCNT0 and TCNT1 are always synchronized.
    */
+#if M5_USED
   OCR0A = MotorStartTCNT1 + state->m5out;
+#else
+  OCR0A = MotorStartTCNT1 + state->m3out;
+#endif
+#if M6_USED
   OCR0B = MotorStartTCNT1 + state->m6out;
+#else
+  OCR0B = MotorStartTCNT1 + state->m4out;
+#endif
 
   do {
     cli();
@@ -175,9 +181,21 @@ void motorOutputPPM(struct MT_STATE_S *state)
       M3 = 0;
     if(t >= state->m4out)
       M4 = 0;
-    if(t + 0xff >= state->m5out)
+    if(t + 0xff >=
+#if M5_USED
+    		state->m5out
+#else
+    		state->m3out
+#endif
+    )
       TCCR0A&= ~_BV(COM0A0);  /* Clear pin on match */
-    if(t + 0xff >= state->m6out)
+    if(t + 0xff >=
+#if M6_USED
+    		state->m6out
+#else
+    		state->m4out
+#endif
+    )
       TCCR0A&= ~_BV(COM0B0);  /* Clear pin on match */
     t-= ((2000 + PWM_LOW_PULSE_US) << 3) - 0xff;
   } while(t < 0);
@@ -334,16 +352,24 @@ void motorsIdentify()
     motors.m2out = 0;
     motors.m3out = 0;
     motors.m4out = 0;
+#if M5_USED
     motors.m5out = 0;
+#endif
+#if M6_USED
     motors.m6out = 0;
+#endif
 
     if(LED) {
       if(motor == 1) { motors.m1out = 50; }
       if(motor == 2) { motors.m2out = 50; }
       if(motor == 3) { motors.m3out = 50; }
       if(motor == 4) { motors.m4out = 50; }
+#if M5_USED
       if(motor == 5) { motors.m5out = 50; }
+#endif
+#if M6_USED
       if(motor == 6) { motors.m6out = 50; }
+#endif
     }
 
     motorOutputPPM(&motors);

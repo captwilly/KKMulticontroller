@@ -29,6 +29,17 @@
 #else
 #define SERVO_REVERSE
 #endif
+
+#if defined(SINGLE_COPTER) || defined(TWIN_COPTER) || defined(HEX_COPTER) || defined(Y6_COPTER)
+#define M5_USED 1
+#else
+#define M5_USED 0
+#endif
+#if defined(TWIN_COPTER) || defined(HEX_COPTER) || defined(Y6_COPTER)
+#define M6_USED 1
+#else
+#define M6_USED 0
+#endif
 /*** END HELPER MACROS ***/
 
 /*** BEGIN TYPES ***/
@@ -37,8 +48,12 @@ struct MT_STATE_S{
 	int16_t m2out;
 	int16_t m3out;
 	int16_t m4out;
+#if M5_USED
 	int16_t m5out;
+#endif
+#if M6_USED
 	int16_t m6out;
+#endif
 };
 /*** END TYPES ***/
 

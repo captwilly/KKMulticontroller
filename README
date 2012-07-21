@@ -49,7 +49,7 @@ Single
      M5 ---- ---- M3
     (Servo) | (Servo)
             |
-            M4 (Servo)
+            M6/M4 (Servo)
 
 Dual
             M1 CCW
