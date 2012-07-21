@@ -1,6 +1,6 @@
 # Hey Emacs, this is a -*- makefile -*-
 #----------------------------------------------------------------------------
-# WinAVR Makefile Template written by Eric B. Weddington, Jörg Wunsch, et al.
+# WinAVR Makefile Template written by Eric B. Weddington, Jï¿½rg Wunsch, et al.
 #
 # Released to the Public Domain
 #
@@ -127,6 +127,9 @@ CSTANDARD = -std=gnu99
 
 # Place -D or -U options here for C sources
 CDEFS = -DF_CPU=$(F_CPU)UL
+ifdef COPTER_TYPE
+	CDEFS += -D$(COPTER_TYPE)
+endif
 
 
 # Place -D or -U options here for ASM sources
