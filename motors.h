@@ -31,14 +31,18 @@
 #endif
 /*** END HELPER MACROS ***/
 
+/*** BEGIN TYPES ***/
+struct MT_STATE_S{
+	int16_t m1out;
+	int16_t m2out;
+	int16_t m3out;
+	int16_t m4out;
+	int16_t m5out;
+	int16_t m6out;
+};
+/*** END TYPES ***/
+
 /*** BEGIN VARIABLES ***/
-extern int16_t MotorOut1;
-extern int16_t MotorOut2;
-extern int16_t MotorOut3;
-extern int16_t MotorOut4;
-extern int16_t MotorOut5;
-extern int16_t MotorOut6;
-extern int16_t MotorStartTCNT1;
 #if defined(SINGLE_COPTER) || defined(DUAL_COPTER) || defined(TWIN_COPTER) || defined(TRI_COPTER)
 extern uint8_t servo_skip;
 extern uint16_t servo_skip_divider;
@@ -50,7 +54,7 @@ void motorsSetup(void);
 void motorLoop(void);
 void motorsIdentify(void);
 void motorsThrottleCalibration(void);
-void output_motor_ppm(void);
+void motorOutputPPM(struct MT_STATE_S *state);
 /*** END PROTOTYPES ***/
 
 #endif

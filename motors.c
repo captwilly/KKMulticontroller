@@ -2,13 +2,6 @@
 
 #include "receiver.h"
 
-int16_t MotorOut1;
-int16_t MotorOut2;
-int16_t MotorOut3;
-int16_t MotorOut4;
-int16_t MotorOut5;
-int16_t MotorOut6;
-int16_t MotorStartTCNT1;
 #if defined(SINGLE_COPTER) || defined(DUAL_COPTER) || defined(TWIN_COPTER) || defined(TRI_COPTER)
 uint8_t servo_skip;
 uint16_t servo_skip_divider;
@@ -47,8 +40,9 @@ void motorLoop()
 
 
 
-void output_motor_ppm()
+void motorOutputPPM(struct MT_STATE_S *state)
 {
+  static int16_t MotorStartTCNT1;
   int16_t t;
 
   /*
@@ -56,50 +50,54 @@ void output_motor_ppm()
    */
 
   t = 1000;
-  if(MotorOut1 < 0)
-    MotorOut1 = 0;
-  else if(MotorOut1 > t)
-    MotorOut1 = t;
+  if(state->m1out < 0)
+    state->m1out = 0;
+  else if(state->m1out > t)
+    state->m1out = t;
 #ifdef SINGLE_COPTER
   t = 2000;
 #endif
-  if(MotorOut2 < 0)
-    MotorOut2 = 0;
-  else if(MotorOut2 > t)
-    MotorOut2 = t;
-  if(MotorOut3 < 0)
-    MotorOut3 = 0;
-  else if(MotorOut3 > t)
-    MotorOut3 = t;
-  if(MotorOut4 < 0)
-    MotorOut4 = 0;
-  else if(MotorOut4 > t)
-    MotorOut4 = t;
-  if(MotorOut5 < 0)
-    MotorOut5 = 0;
-  else if(MotorOut5 > t)
-    MotorOut5 = t;
-  if(MotorOut6 < 0)
-    MotorOut6 = 0;
-  else if(MotorOut6 > t)
-    MotorOut6 = t;
-
-  t = 1000;
-  MotorOut1+= t;
-#ifndef SINGLE_COPTER
-  MotorOut2+= t;
-  MotorOut3+= t;
-  MotorOut4+= t;
-  MotorOut5+= t;
-  MotorOut6+= t;
+  if(state->m2out < 0)
+    state->m2out = 0;
+  else if(state->m2out > t)
+    state->m2out = t;
+  if(state->m3out < 0)
+    state->m3out = 0;
+  else if(state->m3out > t)
+    state->m3out = t;
+  if(state->m4out < 0)
+    state->m4out = 0;
+  else if(state->m4out > t)
+    state->m4out = t;
+#if M5_USED
+  if(state->m5out < 0)
+    state->m5out = 0;
+  else if(state->m5out > t)
+    state->m5out = t;
+#endif
+#if M6_USED
+  if(state->m6out < 0)
+    state->m6out = 0;
+  else if(state->m6out > t)
+    state->m6out = t;
 #endif
 
-  MotorOut1<<= 3;
-  MotorOut2<<= 3;
-  MotorOut3<<= 3;
-  MotorOut4<<= 3;
-  MotorOut5<<= 3;
-  MotorOut6<<= 3;
+  t = 1000;
+  state->m1out+= t;
+#ifndef SINGLE_COPTER
+  state->m2out+= t;
+  state->m3out+= t;
+  state->m4out+= t;
+  state->m5out+= t;
+  state->m6out+= t;
+#endif
+
+  state->m1out<<= 3;
+  state->m2out<<= 3;
+  state->m3out<<= 3;
+  state->m4out<<= 3;
+  state->m5out<<= 3;
+  state->m6out<<= 3;
 
   /*
    * Mirror M3, M4 to M5, M6, when possible, for hardware PPM
@@ -107,8 +105,8 @@ void output_motor_ppm()
    * M5 and M6 when it sees these.
    */
 #if defined(DUAL_COPTER) || defined(TRI_COPTER) || defined(QUAD_COPTER) || defined(QUAD_X_COPTER) || defined(Y4_COPTER)
-  MotorOut5 = MotorOut3;
-  MotorOut6 = MotorOut4;
+  state->m5out = state->m3out;
+  state->m6out = state->m4out;
 #endif
 
   /*
@@ -146,12 +144,12 @@ void output_motor_ppm()
    *
    * We turn OFF the pins here, then wait for the ON cycle start.
    */
-  t = MotorStartTCNT1 + MotorOut1;
+  t = MotorStartTCNT1 + state->m1out;
   asm(""::"r" (t)); /* Avoid reordering of add after cli */
   cli();
   OCR1B = t;
   sei();
-  t = MotorStartTCNT1 + MotorOut2;
+  t = MotorStartTCNT1 + state->m2out;
   asm(""::"r" (t)); /* Avoid reordering of add after cli */
   cli();
   OCR1A = t;
@@ -165,21 +163,21 @@ void output_motor_ppm()
    *
    * We hope that TCNT0 and TCNT1 are always synchronized.
    */
-  OCR0A = MotorStartTCNT1 + MotorOut5;
-  OCR0B = MotorStartTCNT1 + MotorOut6;
+  OCR0A = MotorStartTCNT1 + state->m5out;
+  OCR0B = MotorStartTCNT1 + state->m6out;
 
   do {
     cli();
     t = TCNT1;
     sei();
     t-= MotorStartTCNT1;
-    if(t >= MotorOut3)
+    if(t >= state->m3out)
       M3 = 0;
-    if(t >= MotorOut4)
+    if(t >= state->m4out)
       M4 = 0;
-    if(t + 0xff >= MotorOut5)
+    if(t + 0xff >= state->m5out)
       TCCR0A&= ~_BV(COM0A0);  /* Clear pin on match */
-    if(t + 0xff >= MotorOut6)
+    if(t + 0xff >= state->m6out)
       TCCR0A&= ~_BV(COM0B0);  /* Clear pin on match */
     t-= ((2000 + PWM_LOW_PULSE_US) << 3) - 0xff;
   } while(t < 0);
@@ -306,6 +304,7 @@ void motorsIdentify()
   uint16_t delay = 0;
   uint16_t time = TCNT2;
   bool escInit = true;      // Wait until the ESCs have initialized
+  struct MT_STATE_S motors;
 
   while(1) {
     delay += (uint8_t)(TCNT2 - time);
@@ -331,28 +330,30 @@ void motorsIdentify()
       }
     }
 
-    MotorOut1 = 0;
-    MotorOut2 = 0;
-    MotorOut3 = 0;
-    MotorOut4 = 0;
-    MotorOut5 = 0;
-    MotorOut6 = 0;
+    motors.m1out = 0;
+    motors.m2out = 0;
+    motors.m3out = 0;
+    motors.m4out = 0;
+    motors.m5out = 0;
+    motors.m6out = 0;
 
     if(LED) {
-      if(motor == 1) { MotorOut1 = 50; }
-      if(motor == 2) { MotorOut2 = 50; }
-      if(motor == 3) { MotorOut3 = 50; }
-      if(motor == 4) { MotorOut4 = 50; }
-      if(motor == 5) { MotorOut5 = 50; }
-      if(motor == 6) { MotorOut6 = 50; }
+      if(motor == 1) { motors.m1out = 50; }
+      if(motor == 2) { motors.m2out = 50; }
+      if(motor == 3) { motors.m3out = 50; }
+      if(motor == 4) { motors.m4out = 50; }
+      if(motor == 5) { motors.m5out = 50; }
+      if(motor == 6) { motors.m6out = 50; }
     }
 
-    output_motor_ppm();
+    motorOutputPPM(&motors);
   }
 }
 
 void motorsThrottleCalibration()
 {
+  struct MT_STATE_S motors;
+
   // flash LED 3 times
   for(uint8_t i = 0;i < 3;i++) {
     LED = 1;
@@ -364,43 +365,43 @@ void motorsThrottleCalibration()
   while(1) {
     RxGetChannels();
 #ifdef SINGLE_COPTER
-    MotorOut1 = RxInCollective;
-    MotorOut2 = 1400;    // Center: 140
-    MotorOut3 = 1400;
-    MotorOut4 = 1400;
-    MotorOut5 = 1400;
+    motors.m1out = RxInCollective;
+    motors.m2out = 1400;    // Center: 140
+    motors.m3out = 1400;
+    motors.m4out = 1400;
+    motors.m5out = 1400;
 #elif defined(DUAL_COPTER)
-    MotorOut1 = RxInCollective;
-    MotorOut2 = RxInCollective;
-    MotorOut3 = 500;    // Center: 50
-    MotorOut4 = 500;
+    motors.m1out = RxInCollective;
+    motors.m2out = RxInCollective;
+    motors.m3out = 500;    // Center: 50
+    motors.m4out = 500;
 #elif defined(TWIN_COPTER)
-    MotorOut1 = RxInCollective;
-    MotorOut2 = RxInCollective;
-    MotorOut3 = 500;    // Center: 50
-    MotorOut4 = 500;
-    MotorOut5 = 500;
-    MotorOut6 = 500;    // Center: 50, Reverse
+    motors.m1out = RxInCollective;
+    motors.m2out = RxInCollective;
+    motors.m3out = 500;    // Center: 50
+    motors.m4out = 500;
+    motors.m5out = 500;
+    motors.m6out = 500;    // Center: 50, Reverse
 #elif defined(TRI_COPTER)
-    MotorOut1 = RxInCollective;
-    MotorOut2 = RxInCollective;
-    MotorOut3 = RxInCollective;
-    MotorOut4 = 500+RxInYaw*2;    // Center: 50
+    motors.m1out = RxInCollective;
+    motors.m2out = RxInCollective;
+    motors.m3out = RxInCollective;
+    motors.m4out = 500+RxInYaw*2;    // Center: 50
 #elif defined(QUAD_COPTER) || defined(QUAD_X_COPTER) || defined(Y4_COPTER)
-    MotorOut1 = RxInCollective;
-    MotorOut2 = RxInCollective;
-    MotorOut3 = RxInCollective;
-    MotorOut4 = RxInCollective;
+    motors.m1out = RxInCollective;
+    motors.m2out = RxInCollective;
+    motors.m3out = RxInCollective;
+    motors.m4out = RxInCollective;
 #elif defined(HEX_COPTER) ||  defined(Y6_COPTER)
-    MotorOut1 = RxInCollective;
-    MotorOut2 = RxInCollective;
-    MotorOut3 = RxInCollective;
-    MotorOut4 = RxInCollective;
-    MotorOut5 = RxInCollective;
-    MotorOut6 = RxInCollective;
+    motors.m1out = RxInCollective;
+    motors.m2out = RxInCollective;
+    motors.m3out = RxInCollective;
+    motors.m4out = RxInCollective;
+    motors.m5out = RxInCollective;
+    motors.m6out = RxInCollective;
 #else
 #error No Copter configuration defined !!!!
 #endif
-    output_motor_ppm();  // this regulates rate at which we output signals
+    motorOutputPPM(&motors);  // this regulates rate at which we output signals
   }
 }

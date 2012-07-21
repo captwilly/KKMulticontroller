@@ -71,6 +71,7 @@ static inline void loop()
   static uint8_t Arming_TCNT2 = 0;
   int16_t error, emax = 1023;
   int16_t imax, derivative;
+  struct MT_STATE_S motors;
 
   RxGetChannels();
 
@@ -115,45 +116,45 @@ static inline void loop()
 #endif
 
 #ifdef SINGLE_COPTER
-  MotorOut1 = RxInCollective;
-  MotorOut2 = 840;  // 840
-  MotorOut3 = 840;  // 840
-  MotorOut4 = 945;  // 840 + 840/8
-  MotorOut5 = 945;  // 840 + 840/8
+  motors.m1out = RxInCollective;
+  motors.m2out = 840;  // 840
+  motors.m3out = 840;  // 840
+  motors.m4out = 945;  // 840 + 840/8
+  motors.m5out = 945;  // 840 + 840/8
 #elif defined(DUAL_COPTER)
-  MotorOut1 = RxInCollective;
-  MotorOut2 = RxInCollective;
-  MotorOut3 = 500;
-  MotorOut4 = 500;
+  motors.m1out = RxInCollective;
+  motors.m2out = RxInCollective;
+  motors.m3out = 500;
+  motors.m4out = 500;
 #elif defined(TWIN_COPTER)
-  MotorOut1 = RxInCollective;
-  MotorOut2 = RxInCollective;
-  MotorOut3 = 500;
-  MotorOut4 = 500;
-  MotorOut5 = 500;  // Optional
-  MotorOut6 = 500;  // Optional
+  motors.m1out = RxInCollective;
+  motors.m2out = RxInCollective;
+  motors.m3out = 500;
+  motors.m4out = 500;
+  motors.m5out = 500;  // Optional
+  motors.m6out = 500;  // Optional
 #elif defined(TRI_COPTER)
-  MotorOut1 = RxInCollective;
-  MotorOut2 = RxInCollective;
-  MotorOut3 = RxInCollective;
-  MotorOut4 = 500;
+  motors.m1out = RxInCollective;
+  motors.m2out = RxInCollective;
+  motors.m3out = RxInCollective;
+  motors.m4out = 500;
 #elif defined(QUAD_COPTER) || defined(QUAD_X_COPTER)
-  MotorOut1 = RxInCollective;
-  MotorOut2 = RxInCollective;
-  MotorOut3 = RxInCollective;
-  MotorOut4 = RxInCollective;
+  motors.m1out = RxInCollective;
+  motors.m2out = RxInCollective;
+  motors.m3out = RxInCollective;
+  motors.m4out = RxInCollective;
 #elif defined(Y4_COPTER)
-  MotorOut1 = RxInCollective;
-  MotorOut2 = RxInCollective;
-  MotorOut3 = RxInCollective * 3 / 4;    // 25% Down
-  MotorOut4 = RxInCollective * 3 / 4;    // 25% Down
+  motors.m1out = RxInCollective;
+  motors.m2out = RxInCollective;
+  motors.m3out = RxInCollective * 3 / 4;    // 25% Down
+  motors.m4out = RxInCollective * 3 / 4;    // 25% Down
 #elif defined(HEX_COPTER) ||  defined(Y6_COPTER)
-  MotorOut1 = RxInCollective;
-  MotorOut2 = RxInCollective;
-  MotorOut3 = RxInCollective;
-  MotorOut4 = RxInCollective;
-  MotorOut5 = RxInCollective;
-  MotorOut6 = RxInCollective;
+  motors.m1out = RxInCollective;
+  motors.m2out = RxInCollective;
+  motors.m3out = RxInCollective;
+  motors.m4out = RxInCollective;
+  motors.m5out = RxInCollective;
+  motors.m6out = RxInCollective;
 #endif
 
   imax = RxInCollective;
@@ -182,50 +183,50 @@ static inline void loop()
         integral[ROLL] = -imax;
       derivative = error - last_error[ROLL];
       last_error[ROLL] = error;
-      RxInRoll+= error + (integral[ROLL] >> 2) + (derivative >> 2);
+      RxInRoll += error + (integral[ROLL] >> 2) + (derivative >> 2);
     } else {
-      RxInRoll-= gyroADC[ROLL];
+      RxInRoll -= gyroADC[ROLL];
     }
   }
 
 #ifdef SINGLE_COPTER
-  MotorOut2+= RxInRoll;
-  MotorOut4-= RxInRoll;
+  motors.m2out += RxInRoll;
+  motors.m4out -= RxInRoll;
 #elif defined(DUAL_COPTER)
-  MotorOut4+= RxInRoll;
+  motors.m4out += RxInRoll;
 #elif defined(TWIN_COPTER)
   RxInRoll = (RxInRoll * 7) >> 3;  // Approximation of sin(60) without div
-  MotorOut1+= RxInRoll;
-  MotorOut2-= RxInRoll;
+  motors.m1out += RxInRoll;
+  motors.m2out -= RxInRoll;
 #elif defined(TRI_COPTER)
   RxInRoll = (RxInRoll * 7) >> 3;  // (.875 versus .86602540)
-  MotorOut1+= RxInRoll;
-  MotorOut2-= RxInRoll;
+  motors.m1out += RxInRoll;
+  motors.m2out -= RxInRoll;
 #elif defined(QUAD_COPTER)
-  MotorOut2+= RxInRoll;
-  MotorOut3-= RxInRoll;
+  motors.m2out += RxInRoll;
+  motors.m3out -= RxInRoll;
 #elif defined(QUAD_X_COPTER)
   RxInRoll = RxInRoll >> 1;
-  MotorOut1+= RxInRoll;
-  MotorOut2-= RxInRoll;
-  MotorOut3-= RxInRoll;
-  MotorOut4+= RxInRoll;
+  motors.m1out += RxInRoll;
+  motors.m2out -= RxInRoll;
+  motors.m3out -= RxInRoll;
+  motors.m4out += RxInRoll;
 #elif defined(Y4_COPTER)
   RxInRoll = (RxInRoll * 7) >> 3;
-  MotorOut1+= RxInRoll;
-  MotorOut2-= RxInRoll;
+  motors.m1out += RxInRoll;
+  motors.m2out -= RxInRoll;
 #elif defined(HEX_COPTER)
   RxInRoll = (RxInRoll * 7) >> 3;
-  MotorOut2-= RxInRoll;
-  MotorOut3-= RxInRoll;
-  MotorOut5+= RxInRoll;
-  MotorOut6+= RxInRoll;
+  motors.m2out -= RxInRoll;
+  motors.m3out -= RxInRoll;
+  motors.m5out += RxInRoll;
+  motors.m6out += RxInRoll;
 #elif defined(Y6_COPTER)
   RxInRoll = (RxInRoll * 7) >> 3;
-  MotorOut1+= RxInRoll;
-  MotorOut2+= RxInRoll;
-  MotorOut3-= RxInRoll;
-  MotorOut4-= RxInRoll;
+  motors.m1out += RxInRoll;
+  motors.m2out += RxInRoll;
+  motors.m3out -= RxInRoll;
+  motors.m4out -= RxInRoll;
 #endif
 
   /* Calculate pitch output - Test without props!! */
@@ -249,59 +250,59 @@ static inline void loop()
         integral[PITCH] = -imax;
       derivative = error - last_error[PITCH];
       last_error[PITCH] = error;
-      RxInPitch+= error + (integral[PITCH] >> 2) + (derivative >> 2);
+      RxInPitch += error + (integral[PITCH] >> 2) + (derivative >> 2);
     } else {
-      RxInPitch-= gyroADC[PITCH];
+      RxInPitch -= gyroADC[PITCH];
     }
   }
 
 #ifdef SINGLE_COPTER
-  MotorOut3+= RxInPitch;
-  MotorOut5-= RxInPitch;
+  motors.m3out += RxInPitch;
+  motors.m5out -= RxInPitch;
 #elif defined(DUAL_COPTER)
-  MotorOut3+= RxInPitch;
+  motors.m3out += RxInPitch;
 #elif defined(TWIN_COPTER)
-  MotorOut3-= SERVO_REVERSE RxInPitch;
-  MotorOut4+= SERVO_REVERSE RxInPitch;
+  motors.m3out -= SERVO_REVERSE RxInPitch;
+  motors.m4out += SERVO_REVERSE RxInPitch;
   // Stick Only, Optional
   RxInOrgPitch = abs(RxInOrgPitch);
-  MotorOut5+= RxInOrgPitch;      // Tain Servo-Optional, Down Only
-  MotorOut6-= RxInOrgPitch;      // Tain Servo-Optional, Down Only (Reverse)
+  motors.m5out += RxInOrgPitch;      // Tain Servo-Optional, Down Only
+  motors.m6out -= RxInOrgPitch;      // Tain Servo-Optional, Down Only (Reverse)
 #elif defined(TRI_COPTER)
-  MotorOut3-= RxInPitch;
+  motors.m3out -= RxInPitch;
   RxInPitch = (RxInPitch >> 1);      // cosine of 60
-  MotorOut1+= RxInPitch;
-  MotorOut2+= RxInPitch;
+  motors.m1out += RxInPitch;
+  motors.m2out += RxInPitch;
 #elif defined(QUAD_COPTER)
-  MotorOut1+= RxInPitch;
-  MotorOut4-= RxInPitch;
+  motors.m1out += RxInPitch;
+  motors.m4out -= RxInPitch;
 #elif defined(QUAD_X_COPTER)
   RxInPitch = (RxInPitch >> 1);      // cosine of 60
-  MotorOut1+= RxInPitch;
-  MotorOut2+= RxInPitch;
-  MotorOut3-= RxInPitch;
-  MotorOut4-= RxInPitch;
+  motors.m1out += RxInPitch;
+  motors.m2out += RxInPitch;
+  motors.m3out -= RxInPitch;
+  motors.m4out -= RxInPitch;
 #elif defined(Y4_COPTER)
-  MotorOut1+= RxInPitch;
-  MotorOut2+= RxInPitch;
-  MotorOut3-= RxInPitch;
-  MotorOut4-= RxInPitch;
+  motors.m1out += RxInPitch;
+  motors.m2out += RxInPitch;
+  motors.m3out -= RxInPitch;
+  motors.m4out -= RxInPitch;
 #elif defined(HEX_COPTER)
-  MotorOut1+= RxInPitch;
-  MotorOut4-= RxInPitch;
+  motors.m1out += RxInPitch;
+  motors.m4out -= RxInPitch;
   RxInPitch = (RxInPitch >> 2);
-  MotorOut2+= RxInPitch;
-  MotorOut3-= RxInPitch;
-  MotorOut5-= RxInPitch;
-  MotorOut6+= RxInPitch;
+  motors.m2out += RxInPitch;
+  motors.m3out -= RxInPitch;
+  motors.m5out -= RxInPitch;
+  motors.m6out += RxInPitch;
 #elif defined(Y6_COPTER)
-  MotorOut5-= RxInPitch;
-  MotorOut6-= RxInPitch;
+  motors.m5out -= RxInPitch;
+  motors.m6out -= RxInPitch;
   RxInPitch = (RxInPitch >> 1);      // cosine of 60
-  MotorOut1+= RxInPitch;
-  MotorOut2+= RxInPitch;
-  MotorOut3+= RxInPitch;
-  MotorOut4+= RxInPitch;
+  motors.m1out += RxInPitch;
+  motors.m2out += RxInPitch;
+  motors.m3out += RxInPitch;
+  motors.m4out += RxInPitch;
 #endif
 
   /* Calculate yaw output - Test without props!! */
@@ -324,59 +325,59 @@ static inline void loop()
       integral[YAW] = -imax;
     derivative = error - last_error[YAW];
     last_error[YAW] = error;
-    RxInYaw+= error + (integral[YAW] >> 4) + (derivative >> 4);
+    RxInYaw += error + (integral[YAW] >> 4) + (derivative >> 4);
   }
 
 #ifdef SINGLE_COPTER
-  MotorOut2+= RxInYaw;
-  MotorOut3+= RxInYaw;
-  MotorOut4+= RxInYaw;
-  MotorOut5+= RxInYaw;
+  motors.m2out += RxInYaw;
+  motors.m3out += RxInYaw;
+  motors.m4out += RxInYaw;
+  motors.m5out += RxInYaw;
 #elif defined(DUAL_COPTER)
-  MotorOut1-= RxInYaw;
-  MotorOut2+= RxInYaw;
+  motors.m1out -= RxInYaw;
+  motors.m2out += RxInYaw;
 #elif defined(TWIN_COPTER)
-  MotorOut3+= SERVO_REVERSE(RxInYaw >> 1);
-  MotorOut4+= SERVO_REVERSE(RxInYaw >> 1);
+  motors.m3out += SERVO_REVERSE(RxInYaw >> 1);
+  motors.m4out += SERVO_REVERSE(RxInYaw >> 1);
 #elif defined(TRI_COPTER)
-  MotorOut4+= SERVO_REVERSE RxInYaw;
+  motors.m4out += SERVO_REVERSE RxInYaw;
 #elif defined(QUAD_COPTER)
-  MotorOut1-= RxInYaw;
-  MotorOut2+= RxInYaw;
-  MotorOut3+= RxInYaw;
-  MotorOut4-= RxInYaw;
+  motors.m1out -= RxInYaw;
+  motors.m2out += RxInYaw;
+  motors.m3out += RxInYaw;
+  motors.m4out -= RxInYaw;
 #elif defined(QUAD_X_COPTER)
-  MotorOut1-= RxInYaw;
-  MotorOut2+= RxInYaw;
-  MotorOut3-= RxInYaw;
-  MotorOut4+= RxInYaw;
+  motors.m1out -= RxInYaw;
+  motors.m2out += RxInYaw;
+  motors.m3out -= RxInYaw;
+  motors.m4out += RxInYaw;
 #elif defined(Y4_COPTER)
-  if((MotorOut3 - RxInYaw) < 100)
-    RxInYaw = MotorOut3 - 100;  // Yaw Range Limit
-  if((MotorOut3 - RxInYaw) > 1000)
-    RxInYaw = MotorOut3 - 1000;  // Yaw Range Limit
+  if((motors.m3out - RxInYaw) < 100)
+    RxInYaw = motors.m3out - 100;  // Yaw Range Limit
+  if((motors.m3out - RxInYaw) > 1000)
+    RxInYaw = motors.m3out - 1000;  // Yaw Range Limit
 
-  if((MotorOut4 + RxInYaw) < 100)
-    RxInYaw = 100 - MotorOut4;  // Yaw Range Limit
-  if((MotorOut4 + RxInYaw) > 1000)
-    RxInYaw = 1000 - MotorOut4;  // Yaw Range Limit
+  if((motors.m4out + RxInYaw) < 100)
+    RxInYaw = 100 - motors.m4out;  // Yaw Range Limit
+  if((motors.m4out + RxInYaw) > 1000)
+    RxInYaw = 1000 - motors.m4out;  // Yaw Range Limit
 
-  MotorOut3-= RxInYaw;
-  MotorOut4+= RxInYaw;
+  motors.m3out -= RxInYaw;
+  motors.m4out += RxInYaw;
 #elif defined(HEX_COPTER)
-  MotorOut1-= RxInYaw;
-  MotorOut2+= RxInYaw;
-  MotorOut3-= RxInYaw;
-  MotorOut4+= RxInYaw;
-  MotorOut5-= RxInYaw;
-  MotorOut6+= RxInYaw;
+  motors.m1out -= RxInYaw;
+  motors.m2out += RxInYaw;
+  motors.m3out -= RxInYaw;
+  motors.m4out += RxInYaw;
+  motors.m5out -= RxInYaw;
+  motors.m6out += RxInYaw;
 #elif defined(Y6_COPTER)
-  MotorOut1-= RxInYaw;
-  MotorOut4-= RxInYaw;
-  MotorOut5-= RxInYaw;
-  MotorOut2+= RxInYaw;
-  MotorOut3+= RxInYaw;
-  MotorOut6+= RxInYaw;
+  motors.m1out -= RxInYaw;
+  motors.m4out -= RxInYaw;
+  motors.m5out -= RxInYaw;
+  motors.m2out += RxInYaw;
+  motors.m3out += RxInYaw;
+  motors.m6out += RxInYaw;
 #endif
 
 #if defined(TRI_COPTER)
@@ -386,88 +387,88 @@ static inline void loop()
    * motors. This gives priority to stabilization without a fixed
    * collective limit.
    */
-  imax = MotorOut1;
-  if(MotorOut2 > imax)
-    imax = MotorOut2;
-  if(MotorOut3 > imax)
-    imax = MotorOut3;
-  imax-= 1000;
+  imax = motors.m1out;
+  if(motors.m2out > imax)
+    imax = motors.m2out;
+  if(motors.m3out > imax)
+    imax = motors.m3out;
+  imax -= 1000;
   if(imax > 0) {
-    MotorOut1-= imax;
-    MotorOut2-= imax;
-    MotorOut3-= imax;
+    motors.m1out -= imax;
+    motors.m2out -= imax;
+    motors.m3out -= imax;
   }
 #endif
 
   imax = 114;
   //--- Limit the lowest value to avoid stopping of motor if motor value is under-saturated ---
-  if(MotorOut1 < imax)
-    MotorOut1 = imax;  // this is the motor idle level
-  if(MotorOut2 < imax)
-    MotorOut2 = imax;
+  if(motors.m1out < imax)
+    motors.m1out = imax;  // this is the motor idle level
+  if(motors.m2out < imax)
+    motors.m2out = imax;
 #if defined(TRI_COPTER) || defined(QUAD_COPTER) || defined(QUAD_X_COPTER) || defined(Y4_COPTER)
-  if(MotorOut3 < imax)
-    MotorOut3 = imax;
+  if(motors.m3out < imax)
+    motors.m3out = imax;
 #endif
 #if defined(QUAD_COPTER) || defined(QUAD_X_COPTER) || defined(Y4_COPTER)
-  if(MotorOut4 < imax)
-    MotorOut4 = imax;
+  if(motors.m4out < imax)
+    motors.m4out = imax;
 #endif
 #if defined(HEX_COPTER) || defined(Y6_COPTER)
-  if(MotorOut5 < imax)
-    MotorOut5 = imax;
-  if(MotorOut6 < imax)
-    MotorOut6 = imax;
+  if(motors.m5out < imax)
+    motors.m5out = imax;
+  if(motors.m6out < imax)
+    motors.m6out = imax;
 #endif
 
   //--- Output to motor ESC's ---
   if(RxInCollective < 1 || !Armed) {
     /* turn off motors unless armed and collective is non-zero */
 #ifdef SINGLE_COPTER
-    MotorOut1 = 0;
-    MotorOut2 = 840;
-    MotorOut3 = 840;
-    MotorOut4 = 840;
-    MotorOut5 = 840;
+    motors.m1out = 0;
+    motors.m2out = 840;
+    motors.m3out = 840;
+    motors.m4out = 840;
+    motors.m5out = 840;
 #elif defined(DUAL_COPTER)
-    MotorOut1 = 0;
-    MotorOut2 = 0;
+    motors.m1out = 0;
+    motors.m2out = 0;
     if(!Armed) {
-      MotorOut3 = 500;
-      MotorOut4 = 500;
+      motors.m3out = 500;
+      motors.m4out = 500;
     }
 #elif defined(TWIN_COPTER)
-    MotorOut1 = 0;
-    MotorOut2 = 0;
+    motors.m1out = 0;
+    motors.m2out = 0;
     if(!Armed) {
-      MotorOut3 = 500;
-      MotorOut4 = 500;
-      MotorOut5 = 500;
-      MotorOut6 = 500;
+      motors.m3out = 500;
+      motors.m4out = 500;
+      motors.m5out = 500;
+      motors.m6out = 500;
     }
 #elif defined(TRI_COPTER)
-    MotorOut1 = 0;
-    MotorOut2 = 0;
-    MotorOut3 = 0;
+    motors.m1out = 0;
+    motors.m2out = 0;
+    motors.m3out = 0;
     if(!Armed)
-      MotorOut4 = 500;
+      motors.m4out = 500;
 #elif defined(QUAD_COPTER) || defined(QUAD_X_COPTER) || defined(Y4_COPTER)
-    MotorOut1 = 0;
-    MotorOut2 = 0;
-    MotorOut3 = 0;
-    MotorOut4 = 0;
+    motors.m1out = 0;
+    motors.m2out = 0;
+    motors.m3out = 0;
+    motors.m4out = 0;
 #elif defined(HEX_COPTER) ||  defined(Y6_COPTER)
-    MotorOut1 = 0;
-    MotorOut2 = 0;
-    MotorOut3 = 0;
-    MotorOut4 = 0;
-    MotorOut5 = 0;
-    MotorOut6 = 0;
+    motors.m1out = 0;
+    motors.m2out = 0;
+    motors.m3out = 0;
+    motors.m4out = 0;
+    motors.m5out = 0;
+    motors.m6out = 0;
 #endif
   }
 
   LED = 0;
-  output_motor_ppm();
+  motorOutputPPM(&motors);
 }
 
 int main()
