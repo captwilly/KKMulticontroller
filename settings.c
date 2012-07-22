@@ -3,56 +3,35 @@
 #include <avr/eeprom.h>
 #include "gyros.h"
 
-struct config Config;
+/*** BEGIN DEFINITIONS ***/
+#define EEPROM_DATA_START_POS 0      // Settings save offset in eeprom
+/*** END DEFINITIONS ***/
 
-void eeprom_write_byte_changed(uint8_t *addr, uint8_t value)
+void settingsWrite(struct SETTINGS_S *settings)
 {
-  if(eeprom_read_byte(addr) != value)
-    eeprom_write_byte(addr, value);
+	settings->setup = 42;
+	eeprom_update_block((void*)settings, (void *)EEPROM_DATA_START_POS,
+			sizeof(struct SETTINGS_S));
 }
 
-void eeprom_write_block_changes(const uint8_t *src, void *dest, size_t size)
+static void settingsSetDefaults(void)
 {
-  size_t len;
+	struct SETTINGS_S settings;
 
-  for(len = 0;len < size;len++) {
-    eeprom_write_byte_changed(dest, *src);
-    src++;
-    dest++;
-  }
+	settings.RollGyroDirection  = GYRO_REVERSED;
+	settings.PitchGyroDirection  = GYRO_REVERSED;
+	settings.YawGyroDirection    = GYRO_NORMAL;
+	settings.setup = 42;
+
+	settingsWrite(&settings);
 }
 
-void Save_Config_to_EEPROM()
-{
-  eeprom_write_block_changes(
-    (const void *)&Config, (void *)EEPROM_DATA_START_POS,
-    sizeof(struct config));
-}
-
-void Set_EEPROM_Default_Config()
-{
-  Config.RollGyroDirection  = GYRO_REVERSED;
-  Config.PitchGyroDirection  = GYRO_REVERSED;
-  Config.YawGyroDirection    = GYRO_NORMAL;
-}
-
-void Initial_EEPROM_Config_Load()
-{
-  // load up last settings from EEPROM
-  if(eeprom_read_byte((uint8_t *)EEPROM_DATA_START_POS) != 42) {
-    Config.setup = 42;
-    Set_EEPROM_Default_Config();
-    // write to eeProm
-    Save_Config_to_EEPROM();
-  } else {
-    // read eeprom
-    eeprom_read_block(&Config, (void *)EEPROM_DATA_START_POS, sizeof(struct config));
-  }
-}
-
-void settingsSetup()
-{
-  Initial_EEPROM_Config_Load();
+void settingsRead(struct SETTINGS_S *settings){
+	eeprom_read_block(settings, (void *)EEPROM_DATA_START_POS, sizeof(struct SETTINGS_S));
+	if(42 != settings->setup){
+		settingsSetDefaults();
+		settingsRead(settings);
+	}
 }
 
 void settingsClearAll()
@@ -64,7 +43,6 @@ void settingsClearAll()
     _delay_ms(25);
   }
 
-  Set_EEPROM_Default_Config();
-  while(1)
-          ;
+  settingsSetDefaults();
+  while(1);
 }

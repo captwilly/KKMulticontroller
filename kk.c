@@ -18,7 +18,6 @@ static void setup()
   receiverSetup();
   gyrosSetup();
   motorsSetup();
-  settingsSetup();
 
   LED_DIR   = OUTPUT;
   LED    = 0;
