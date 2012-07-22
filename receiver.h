@@ -7,7 +7,7 @@
 // Stick arming and throw detection (in % * 10 eg 1000 steps)
 #define STICK_THROW 300
 
-// Stick gain shift-right (after 32-bit multiplication of GainInADC[] value).
+// Stick gain shift-right (after 32-bit multiplication of GYRO_GAIN_ADC_S value).
 #define STICK_GAIN_SHIFT 8
 
 // Max Collective

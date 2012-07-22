@@ -3,17 +3,22 @@
 #include "receiver.h"
 #include "settings.h"
 
-uint16_t GainInADC[3];        // ADC result
-int16_t  gyroADC[3];          // Holds Gyro ADC's
-int16_t  gyroZero[3];         // used for calibrating Gyros on ground
+/*** BEGIN PROTOTYPES ***/
+static void init_adc(void);
+static uint16_t read_adc(uint8_t channel);
+/*** END PROTOTYPES ***/
 
-void init_adc()
+/*** BEGIN VARIABLES ***/
+static struct GYRO_STATE_S gyroZeroPoint;
+/*** END VARIABLES ***/
+
+void init_adc(void)
 {
   DIDR0  = 0b00111111;  // Digital Input Disable Register - ADC5..0 Digital Input Disable
   ADCSRB  = 0b00000000;  // ADC Control and Status Register B - ADTS2:0
 }
 
-void gyrosSetup()
+void gyrosSetup(void)
 {
   GYRO_YAW_DIR    = INPUT;
   GYRO_PITCH_DIR  = INPUT;
@@ -26,13 +31,14 @@ void gyrosSetup()
 }
 
 
-void read_adc(uint8_t channel)
+uint16_t read_adc(uint8_t channel)
 {
   ADMUX  = channel;            // set channel
   ADCSRA  = _BV(ADEN) | _BV(ADSC) | _BV(ADPS1) | _BV(ADPS2);  // 0b11000110
 
   while(ADCSRA & _BV(ADSC))
     ;  // wait to complete
+  return ADCW;
 }
 
 /*
@@ -41,59 +47,58 @@ void read_adc(uint8_t channel)
  * is ADC shifted left by 6, so we scale the gain to 6-bit by shifting
  * right by 10 - 6 = 4 bits.
  */
-void ReadGainPots()
+void gyrosReadGainPots(struct GYRO_GAIN_ADC_S *pots)
 {
-  read_adc(3);      // read roll gain ADC3
-  GainInADC[ROLL] = GAIN_POT_REVERSE ADCW;
+  // read roll gain
+  pots->roll = GAIN_POT_REVERSE read_adc(GAIN_ROLL_ADC_CH);
 
-  read_adc(4);      // read pitch gain ADC4
-  GainInADC[PITCH] = GAIN_POT_REVERSE ADCW;
+  // read pitch gain
+  pots->pitch = GAIN_POT_REVERSE read_adc(GAIN_PITCH_ADC_CH);
 
-  read_adc(5);      // read yaw gain ADC5
-  GainInADC[YAW] = GAIN_POT_REVERSE ADCW;
+  // read yaw gain
+  pots->yaw = GAIN_POT_REVERSE read_adc(GAIN_YAW_ADC_CH);
 }
 
-void ReadGyros()
+void gyrosRead(struct GYRO_STATE_S *state)
 {
-  read_adc(2);      // read roll gyro ADC2
-  gyroADC[ROLL] = ADCW;
+  // read roll gyro
+  state->roll = read_adc(GYRO_ROLL_ADC_CH) - gyroZeroPoint.roll;
 
-  read_adc(1);      // read pitch gyro ADC1
-  gyroADC[PITCH] = ADCW;
+  // read pitch gyro
+  state->pitch = read_adc(GYRO_PITCH_ADC_CH) - gyroZeroPoint.pitch;
 
 #ifdef EXTERNAL_YAW_GYRO
-  gyroADC[YAW] = 0;
+  state->yaw = 0;
 #else
-  read_adc(0);      // read yaw gyro ADC0
-  gyroADC[YAW] = ADCW;
+  // read yaw gyro
+  state->yaw = read_adc(GYRO_YAW_ADC_CH) - gyroZeroPoint.yaw;
 #endif
 }
 
-void CalibrateGyros()
+void gyrosCalibrate(void)
 {
+  struct GYRO_STATE_S gyro;
   uint8_t i;
 
-  ReadGainPots();  // about time we did this !
-
   // get/set gyro zero value (average of 16 readings)
-  gyroZero[ROLL] = 0;
-  gyroZero[PITCH] = 0;
-  gyroZero[YAW] = 0;
+  gyroZeroPoint.roll = 0;
+  gyroZeroPoint.pitch = 0;
+  gyroZeroPoint.yaw = 0;
 
   for(i = 0;i < 16;i++) {
-    ReadGyros();
+    gyrosRead(&gyro);
 
-    gyroZero[ROLL]+= gyroADC[ROLL];
-    gyroZero[PITCH]+= gyroADC[PITCH];
-    gyroZero[YAW]+= gyroADC[YAW];
+    gyroZeroPoint.roll += gyro.roll;
+    gyroZeroPoint.pitch += gyro.pitch;
+    gyroZeroPoint.yaw += gyro.yaw;
   }
 
-  gyroZero[ROLL] = (gyroZero[ROLL] + 8) >> 4;
-  gyroZero[PITCH] = (gyroZero[PITCH] + 8) >> 4;
-  gyroZero[YAW] = (gyroZero[YAW] + 8) >> 4;
+  gyroZeroPoint.roll = (gyroZeroPoint.roll + 8) >> 4;
+  gyroZeroPoint.pitch = (gyroZeroPoint.pitch + 8) >> 4;
+  gyroZeroPoint.yaw = (gyroZeroPoint.yaw + 8) >> 4;
 }
 
-void gyrosReverse()
+void gyrosReverse(void)
 {
   struct RX_STATE_S rxState;
 

@@ -6,7 +6,7 @@
 /*** BEGIN DEFINES ***/
 //#define GAIN_POT_REVERSE
 
-// Gyro gain shift-right (after 32-bit multiplication of GainInADC[] value).
+// Gyro gain shift-right (after 32-bit multiplication of GYRO_GAIN_ADC_S value).
 #define GYRO_GAIN_SHIFT 5
 
 // Skip yaw gyro calculations if using external yaw gyro
@@ -26,21 +26,23 @@
 
 /*** BEGIN TYPES ***/
 enum GyroDirection { GYRO_NORMAL = 0, GYRO_REVERSED };
-enum GyroArrayIndex { ROLL = 0, PITCH, YAW };
+
+struct GYRO_GAIN_ADC_S{
+	uint16_t roll;
+	uint16_t pitch;
+	uint16_t yaw;
+};
+struct GYRO_STATE_S{
+	int16_t roll;
+	int16_t pitch;
+	int16_t yaw;
+};
 /*** END TYPES ***/
 
-/*** BEGIN VARIABLES ***/
-extern uint16_t GainInADC[3];        // ADC result
-extern int16_t  gyroADC[3];          // Holds Gyro ADC's
-extern int16_t  gyroZero[3];         // used for calibrating Gyros on ground
-/*** END VARIABLES ***/
-
 /*** BEGIN PROTOTYPES ***/
-void init_adc(void);
-void read_adc(uint8_t channel);
-void ReadGainPots(void);
-void ReadGyros(void);
-void CalibrateGyros(void);
+void gyrosReadGainPots(struct GYRO_GAIN_ADC_S *pots);
+void gyrosRead(struct GYRO_STATE_S *state);
+void gyrosCalibrate(void);
 void gyrosSetup(void);
 void gyrosReverse(void);
 /*** END PROTOTYPES ***/
