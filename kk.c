@@ -168,8 +168,6 @@ static inline void main_loop()
 
 	  rxState.roll = ((int32_t)rxState.roll * (uint32_t)pots.roll) >> STICK_GAIN_SHIFT;
 	  gyro.roll = ((int32_t)gyro.roll * (uint32_t)pots.roll) >> GYRO_GAIN_SHIFT;
-	  if(Config.RollGyroDirection == GYRO_NORMAL)
-		gyro.roll = -gyro.roll;
 
 	  if(Armed) {
 		if(0) {
@@ -235,8 +233,6 @@ static inline void main_loop()
 
 	  rxState.pitch = ((int32_t)rxState.pitch * (uint32_t)pots.pitch) >> STICK_GAIN_SHIFT;
 	  gyro.pitch = ((int32_t)gyro.pitch * (uint32_t)pots.pitch) >> GYRO_GAIN_SHIFT;
-	  if(Config.PitchGyroDirection == GYRO_NORMAL)
-		  gyro.pitch = -gyro.pitch;
 
 	  if(Armed) {
 		if(0) {
@@ -311,8 +307,6 @@ static inline void main_loop()
 
 	  rxState.yaw = ((int32_t)rxState.yaw * (uint32_t)pots.yaw) >> STICK_GAIN_SHIFT;
 	  gyro.yaw = ((int32_t)gyro.yaw * (uint32_t)pots.yaw) >> GYRO_GAIN_SHIFT;
-	  if(Config.YawGyroDirection == GYRO_NORMAL)
-		  gyro.yaw = -gyro.yaw;
 
 	  if(Armed) {
 		error = rxState.yaw - gyro.yaw;

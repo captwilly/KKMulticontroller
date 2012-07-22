@@ -63,15 +63,21 @@ void gyrosRead(struct GYRO_STATE_S *state)
 {
   // read roll gyro
   state->roll = read_adc(GYRO_ROLL_ADC_CH) - gyroZeroPoint.roll;
+  if(Config.RollGyroDirection == GYRO_NORMAL)
+	  state->roll = -state->roll;
 
   // read pitch gyro
   state->pitch = read_adc(GYRO_PITCH_ADC_CH) - gyroZeroPoint.pitch;
+  if(Config.PitchGyroDirection == GYRO_NORMAL)
+	  state->pitch = -state->pitch;
 
 #ifdef EXTERNAL_YAW_GYRO
   state->yaw = 0;
 #else
   // read yaw gyro
   state->yaw = read_adc(GYRO_YAW_ADC_CH) - gyroZeroPoint.yaw;
+  if(Config.YawGyroDirection == GYRO_NORMAL)
+	  state->yaw = -state->yaw;
 #endif
 }
 
