@@ -1,122 +1,53 @@
 #include "receiver.h"
 
-/*** BEGIN PROTOTYPES ***/
-ISR(PCINT2_vect, ISR_NAKED);
-ISR(INT0_vect, ISR_NAKED);
-ISR(INT1_vect, ISR_NAKED);
-ISR(PCINT0_vect, ISR_NAKED);
-
-static int16_t fastdiv8(int16_t x);
-/*** END PROTOTYPES ***/
+#include "util/atomic.h"
 
 /*** BEGIN VARIABLES ***/
-/*
- * Careful! Making these volatile makes it spew r24 crap in the _middle_ of
- * asm volatile statements. Always check assembler output of interrupt
- * routines.
- */
-static uint16_t RxChannel1;
-static uint16_t RxChannel2;
-static uint16_t RxChannel3;
-static uint16_t RxChannel4;
-
-register uint16_t i_tmp asm("r2");               // ISR vars
-register uint16_t RxChannel1Start asm("r4");
-register uint16_t RxChannel2Start asm("r6");
-register uint16_t RxChannel3Start asm("r8");
-register uint16_t RxChannel4Start asm("r10");
-register uint8_t i_sreg asm("r12");
+static volatile uint16_t RxChannel1;
+static volatile uint16_t RxChannel2;
+static volatile uint16_t RxChannel3;
+static volatile uint16_t RxChannel4;
 /*** END VARIABLES ***/
 
 /*** BEGIN RECEIVER INTERRUPTS ***/
-/*
- * Rx interrupts with inline assembler that makes them much faster.
- * Please verify that GCC does not inject anything crazy in here,
- * such as completely unused movs that clobber other registers.
- */
-
-ISR(PCINT2_vect, ISR_NAKED)
+ISR(PCINT2_vect)
 {
-  if(RX_ROLL) {        // rising
-    asm volatile("lds %A0, %1" : "=r" (RxChannel1Start) : "i" (&TCNT1L));
-    asm volatile("lds %B0, %1" : "=r" (RxChannel1Start) : "i" (&TCNT1H));
-    asm volatile("reti");
-  } else {        // falling
-    asm volatile(
-      "lds %A0, %3\n"
-      "lds %B0, %4\n"
-      "in %1, __SREG__\n"
-      "sub %A0, %A2\n"
-      "sbc %B0, %B2\n"
-      "out __SREG__, %1\n"
-        : "+r" (i_tmp), "+r" (i_sreg), "+r" (RxChannel1Start)
-        : "i" (&TCNT1L), "i" (&TCNT1H));
-    RxChannel1 = i_tmp;
-  }
-  asm volatile ("reti");
+	static volatile uint16_t RxChannel1Start;
+	if (RX_ROLL) { // rising
+	  RxChannel1Start = TCNT1;
+	} else { // falling
+		RxChannel1 = TCNT1 - RxChannel1Start;
+	}
 }
 
-ISR(INT0_vect, ISR_NAKED)
+ISR(INT0_vect)
 {
-  if(RX_PITCH) {        // rising
-    asm volatile("lds %A0, %1" : "=r" (RxChannel2Start) : "i" (&TCNT1L));
-    asm volatile("lds %B0, %1" : "=r" (RxChannel2Start) : "i" (&TCNT1H));
-    asm volatile("reti");
-  } else {        // falling
-    asm volatile(
-      "lds %A0, %3\n"
-      "lds %B0, %4\n"
-      "in %1, __SREG__\n"
-      "sub %A0, %A2\n"
-      "sbc %B0, %B2\n"
-      "out __SREG__, %1\n"
-        : "+r" (i_tmp), "+r" (i_sreg), "+r" (RxChannel2Start)
-        : "i" (&TCNT1L), "i" (&TCNT1H));
-    RxChannel2 = i_tmp;
-  }
-  asm volatile ("reti");
+	static volatile uint16_t RxChannel2Start;
+	if (RX_PITCH) { // rising
+	  RxChannel2Start = TCNT1;
+	} else { // falling
+		RxChannel2 = TCNT1 - RxChannel2Start;
+	}
 }
 
-ISR(INT1_vect, ISR_NAKED)
+ISR(INT1_vect)
 {
-  if(RX_COLL) {        // rising
-    asm volatile("lds %A0, %1" : "=r" (RxChannel3Start) : "i" (&TCNT1L));
-    asm volatile("lds %B0, %1" : "=r" (RxChannel3Start) : "i" (&TCNT1H));
-    asm volatile("reti");
-  } else {        // falling
-    asm volatile(
-      "lds %A0, %3\n"
-      "lds %B0, %4\n"
-      "in %1, __SREG__\n"
-      "sub %A0, %A2\n"
-      "sbc %B0, %B2\n"
-      "out __SREG__, %1\n"
-        : "+r" (i_tmp), "+r" (i_sreg), "+r" (RxChannel3Start)
-        : "i" (&TCNT1L), "i" (&TCNT1H));
-    RxChannel3 = i_tmp;
-  }
-  asm volatile ("reti");
+	static volatile uint16_t RxChannel3Start;
+	if (RX_COLL) { // rising
+	  RxChannel3Start = TCNT1;
+	} else { // falling
+		RxChannel3 = TCNT1 - RxChannel3Start;
+	}
 }
 
-ISR(PCINT0_vect, ISR_NAKED)
+ISR(PCINT0_vect)
 {
-  if(RX_YAW) {        // rising
-    asm volatile("lds %A0, %1" : "=r" (RxChannel4Start) : "i" (&TCNT1L));
-    asm volatile("lds %B0, %1" : "=r" (RxChannel4Start) : "i" (&TCNT1H));
-    asm volatile("reti");
-  } else {        // falling
-    asm volatile(
-      "lds %A0, %3\n"
-      "lds %B0, %4\n"
-      "in %1, __SREG__\n"
-      "sub %A0, %A2\n"
-      "sbc %B0, %B2\n"
-      "out __SREG__, %1\n"
-        : "+r" (i_tmp), "+r" (i_sreg), "+r" (RxChannel4Start)
-        : "i" (&TCNT1L), "i" (&TCNT1H));
-    RxChannel4 = i_tmp;
-  }
-  asm volatile ("reti");
+	static volatile uint16_t RxChannel4Start;
+	if (RX_YAW) { // rising
+	  RxChannel4Start = TCNT1;
+	} else { // falling
+		RxChannel4 = TCNT1 - RxChannel4Start;
+	}
 }
 /*** END RECEIVER INTERRUPTS ***/
 
@@ -162,29 +93,23 @@ int16_t fastdiv8(int16_t x) {
 
 /*
  * Copy, scale, and offset the Rx inputs from the interrupt-modified
- * registers.
- *
- * If an intterupt occurs that updates an Rx variable here, SREG will be
- * copied to i_sreg. Bit 7 will not be set in that interrupt as it is
- * cleared by hardware, so i_sreg will not ever match 0xff. We use this
- * as a zero-cost flag to read again to avoid possibly-corrupted values.
- *
- * I could not find any way to avoid the optimizer killing the retry or
- * reordering it to be unsafe other than by doing the set in inline
- * assembler with a memory barrier.
+ * variables.
  */
 void receiverGetChannels(struct RX_STATE_S *state)
 {
-  uint8_t t = 0xff;
-  do {
-    asm volatile("mov %0, %1":"=r" (i_sreg),"=r" (t)::"memory");
-    state->roll = fastdiv8(RxChannel1 - 1520 * 8);
-    state->pitch = fastdiv8(RxChannel2 - 1520 * 8);
-    state->collective = fastdiv8(RxChannel3 - 1120 * 8);
-    state->yaw = fastdiv8(RxChannel4 - 1520 * 8);
-  } while(i_sreg != t);
+	ATOMIC_BLOCK(ATOMIC_RESTORESTATE){
+		state->roll = RxChannel1;
+		state->pitch = RxChannel2;
+		state->collective = RxChannel3;
+		state->yaw = RxChannel4;
+	}
+
+    state->roll = fastdiv8(state->roll - 1520 * 8);
+    state->pitch = fastdiv8(state->pitch - 1520 * 8);
+    state->collective = fastdiv8(state->collective - 1120 * 8);
+    state->yaw = fastdiv8(state->yaw - 1520 * 8);
 #ifdef TWIN_COPTER
-  state->orgPitch = state->pitch;
+  	state->orgPitch = state->pitch;
 #endif
 }
 
