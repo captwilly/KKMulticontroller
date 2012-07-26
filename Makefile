@@ -76,7 +76,7 @@ TARGET = kk
 # Object files directory
 #     To put object files in current directory, use a dot (.), do NOT make
 #     this an empty or blank macro!
-OBJDIR = ./.obj/
+OBJDIR = ./build
 
 
 # List C source files here. (C dependencies are automatically generated.)
@@ -158,6 +158,8 @@ CFLAGS += -funsigned-bitfields
 CFLAGS += -fpack-struct
 CFLAGS += -fshort-enums
 CFLAGS += -Wall
+CFLAGS += -Werror
+CFLAGS += -Wextra
 CFLAGS += -Wstrict-prototypes
 #CFLAGS += -mshort-calls
 #CFLAGS += -fno-unit-at-a-time

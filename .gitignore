@@ -1,6 +1,5 @@
-.dep/
-.obj/
 *.o
+*.d
 *.hex
 *.raw
 *.lst
