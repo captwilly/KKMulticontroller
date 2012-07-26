@@ -2,6 +2,7 @@
 
 #include "receiver.h"
 #include "settings.h"
+#include "string.h"
 
 /*** BEGIN PROTOTYPES ***/
 static void init_adc(void);
@@ -61,26 +62,36 @@ void gyrosReadGainPots(struct GYRO_GAIN_ADC_S *pots)
   pots->yaw = GAIN_POT_REVERSE read_adc(GAIN_YAW_ADC_CH);
 }
 
-void gyrosRead(struct GYRO_STATE_S *state)
-{
-  // read roll gyro
-  state->roll = read_adc(GYRO_ROLL_ADC_CH) - gyroZeroPoint.roll;
-  if(settings.RollGyroDirection == GYRO_NORMAL)
-	  state->roll = -state->roll;
 
-  // read pitch gyro
-  state->pitch = read_adc(GYRO_PITCH_ADC_CH) - gyroZeroPoint.pitch;
-  if(settings.PitchGyroDirection == GYRO_NORMAL)
-	  state->pitch = -state->pitch;
+void gyrosReadClean(struct GYRO_STATE_S *state)
+{
+	// read roll gyro
+	state->roll = read_adc(GYRO_ROLL_ADC_CH);
+
+	// read pitch gyro
+	state->pitch = read_adc(GYRO_PITCH_ADC_CH);
 
 #ifdef EXTERNAL_YAW_GYRO
-  state->yaw = 0;
+	state->yaw = 0;
 #else
-  // read yaw gyro
-  state->yaw = read_adc(GYRO_YAW_ADC_CH) - gyroZeroPoint.yaw;
-  if(settings.YawGyroDirection == GYRO_NORMAL)
-	  state->yaw = -state->yaw;
+	// read yaw gyro
+	state->yaw = read_adc(GYRO_YAW_ADC_CH);
 #endif
+}
+
+void gyrosRead(struct GYRO_STATE_S *state)
+{
+	gyrosReadClean(state);
+
+	state->roll -= gyroZeroPoint.roll;
+	if(settings.RollGyroDirection == GYRO_NORMAL)
+		state->roll = -state->roll;
+	state->pitch -= gyroZeroPoint.pitch;
+	if(settings.PitchGyroDirection == GYRO_NORMAL)
+		state->pitch = -state->pitch;
+	state->yaw -= gyroZeroPoint.yaw;
+	if(settings.YawGyroDirection == GYRO_NORMAL)
+		state->yaw = -state->yaw;
 }
 
 void gyrosCalibrate(void)
@@ -89,12 +100,10 @@ void gyrosCalibrate(void)
   uint8_t i;
 
   // get/set gyro zero value (average of 16 readings)
-  gyroZeroPoint.roll = 0;
-  gyroZeroPoint.pitch = 0;
-  gyroZeroPoint.yaw = 0;
+  memset(&gyroZeroPoint, 0, sizeof(struct GYRO_STATE_S));
 
   for(i = 0;i < 16;i++) {
-    gyrosRead(&gyro);
+    gyrosReadClean(&gyro);
 
     gyroZeroPoint.roll += gyro.roll;
     gyroZeroPoint.pitch += gyro.pitch;
