@@ -4,14 +4,21 @@
 #include "gyros.h"
 
 /*** BEGIN DEFINITIONS ***/
-#define EEPROM_DATA_START_POS 0      // Settings save offset in eeprom
+#define EEPROM_SETTINGS_MAGIC	42
+// Default settings
+static struct SETTINGS_S default_settings
+	__attribute__((section(".eeprom"))) = {
+		.setup 					= EEPROM_SETTINGS_MAGIC,
+		.RollGyroDirection 		= GYRO_REVERSED,
+		.PitchGyroDirection 	= GYRO_REVERSED,
+		.YawGyroDirection 		= GYRO_NORMAL,
+};
 /*** END DEFINITIONS ***/
 
 void settingsWrite(struct SETTINGS_S *settings)
 {
-	settings->setup = 42;
-	eeprom_update_block((void*)settings, (void *)EEPROM_DATA_START_POS,
-			sizeof(struct SETTINGS_S));
+	settings->setup = EEPROM_SETTINGS_MAGIC;
+	eeprom_update_block(settings, &default_settings, sizeof(struct SETTINGS_S));
 }
 
 static void settingsSetDefaults(void)
@@ -21,16 +28,25 @@ static void settingsSetDefaults(void)
 	settings.RollGyroDirection  = GYRO_REVERSED;
 	settings.PitchGyroDirection  = GYRO_REVERSED;
 	settings.YawGyroDirection    = GYRO_NORMAL;
-	settings.setup = 42;
+	settings.setup = EEPROM_SETTINGS_MAGIC;
 
 	settingsWrite(&settings);
 }
 
 void settingsRead(struct SETTINGS_S *settings){
-	eeprom_read_block(settings, (void *)EEPROM_DATA_START_POS, sizeof(struct SETTINGS_S));
-	if(42 != settings->setup){
+	eeprom_read_block(settings, &default_settings, sizeof(struct SETTINGS_S));
+	if(EEPROM_SETTINGS_MAGIC != settings->setup){
 		settingsSetDefaults();
-		settingsRead(settings);
+		eeprom_read_block(settings, &default_settings,
+				sizeof(struct SETTINGS_S));
+		if(EEPROM_SETTINGS_MAGIC != settings->setup){
+			while(true){
+				LED = 1;
+				_delay_ms(1000);
+				LED = 0;
+				_delay_ms(1000);
+			}
+		}
 	}
 }
 
