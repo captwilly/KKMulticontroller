@@ -1,6 +1,7 @@
 #include "receiver.h"
 
 #include "util/atomic.h"
+#include "util/delay.h"
 
 /*** BEGIN VARIABLES ***/
 static volatile uint16_t RxChannel1;
@@ -117,13 +118,14 @@ void receiverStickCenter()
 {
   struct RX_STATE_S rxState;
   uint8_t i;
+  // TODO: move this to settings, so there will be no need to center sticks
+  //	manually
   while(1) {
     receiverGetChannels(&rxState);
     i = abs(rxState.roll) + abs(rxState.pitch) + abs(rxState.yaw);
+    LED = 0;
+    _delay_ms(10);
     LED = 1;
-    while(i) {
-      LED = 0;
-      i--;
-    }
+    _delay_ms(i);
   }
 }
