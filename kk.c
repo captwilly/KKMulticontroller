@@ -4,6 +4,12 @@
 #include "receiver.h"
 #include "motors.h"
 
+FUSES = {
+	.low 		= FUSE_SUT0 & FUSE_CKSEL3 & FUSE_CKSEL2 & FUSE_CKSEL0,	// 0xE2
+	.high 		= FUSE_SPIEN & FUSE_EESAVE & FUSE_BOOTRST,				// 0xd6
+	.extended 	= FUSE_BODLEVEL2 & FUSE_BODLEVEL1,						// 0x04
+}; // beware that these are not programmed automatically
+
 bool Armed;
 
 static void setup(void);
@@ -15,12 +21,12 @@ static void setup()
   struct GYRO_GAIN_ADC_S pots;
   MCUCR = _BV(PUD);  // Disable hardware pull-up
 
+  LED_DIR   = OUTPUT;
+  LED    = 0;
+
   receiverSetup();
   gyrosSetup();
   motorsSetup();
-
-  LED_DIR   = OUTPUT;
-  LED    = 0;
 
   /*
    * This suits my ATmega88A: no Tx trim, output timings perfect.
