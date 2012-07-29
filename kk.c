@@ -12,9 +12,6 @@ FUSES = {
 }; // beware that these are not programmed automatically
 
 
-bool Armed;
-
-
 static void setup(void);
 static void main_loop(void);
 int main(void);
@@ -42,8 +39,6 @@ static void setup() {
      * timer2 8bit - run at 8MHz / 1024 = 7812.5KHz, just used for arming
      */
     TCCR2B = _BV(CS22) | _BV(CS21) | _BV(CS20);
-
-    Armed = false;
 
     /*
      * Flash the LED once at power on
@@ -91,6 +86,7 @@ static void setup() {
 }
 
 static inline void main_loop() {
+    static bool Armed = false;
     static uint16_t Change_Arming = 0;
     static uint8_t Arming_TCNT2 = 0;
     int16_t error, emax = 1023;
