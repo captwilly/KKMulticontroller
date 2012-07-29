@@ -31,7 +31,8 @@ struct RX_STATE_S{
 /*** BEGIN PROTOTYPES ***/
 void receiverSetup(void);
 void receiverGetChannels(struct RX_STATE_S *state);
-void receiverStickCenter(void);
+void receiverStickCenterManual(void);
+void receiverStickCenterAutomatic(void);
 /*** END PROTOTYPES ***/
 
 #endif

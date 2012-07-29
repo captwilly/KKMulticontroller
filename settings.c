@@ -7,11 +7,16 @@
 #define EEPROM_SETTINGS_MAGIC	42
 // Default settings
 static struct SETTINGS_S default_settings
-	__attribute__((section(".eeprom"))) = {
-		.setup 					= EEPROM_SETTINGS_MAGIC,
-		.RollGyroDirection 		= GYRO_REVERSED,
-		.PitchGyroDirection 	= GYRO_REVERSED,
-		.YawGyroDirection 		= GYRO_NORMAL,
+    __attribute__((section(".eeprom"))) = {
+            .setup 					= EEPROM_SETTINGS_MAGIC,
+
+            .RollGyroDirection      = GYRO_REVERSED,
+            .PitchGyroDirection     = GYRO_REVERSED,
+            .YawGyroDirection       = GYRO_NORMAL,
+
+            .RxRollZero	            = 0,
+            .RxPitchZero            = 0,
+            .RxYawZero              = 0,
 };
 /*** END DEFINITIONS ***/
 
@@ -23,14 +28,19 @@ void settingsWrite(struct SETTINGS_S *settings)
 
 static void settingsSetDefaults(void)
 {
-	struct SETTINGS_S settings;
+    struct SETTINGS_S settings;
 
-	settings.RollGyroDirection  = GYRO_REVERSED;
-	settings.PitchGyroDirection  = GYRO_REVERSED;
-	settings.YawGyroDirection    = GYRO_NORMAL;
-	settings.setup = EEPROM_SETTINGS_MAGIC;
+    settings.setup                  = EEPROM_SETTINGS_MAGIC;
 
-	settingsWrite(&settings);
+    settings.RollGyroDirection      = GYRO_REVERSED;
+    settings.PitchGyroDirection     = GYRO_REVERSED;
+    settings.YawGyroDirection       = GYRO_NORMAL;
+
+    settings.RxRollZero	            = 0;
+    settings.RxPitchZero            = 0;
+    settings.RxYawZero              = 0;
+
+    settingsWrite(&settings);
 }
 
 void settingsRead(struct SETTINGS_S *settings){

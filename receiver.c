@@ -1,5 +1,6 @@
 #include "receiver.h"
 
+#include "settings.h"
 #include "util/atomic.h"
 #include "util/delay.h"
 
@@ -8,6 +9,8 @@ static volatile uint16_t RxChannel1;
 static volatile uint16_t RxChannel2;
 static volatile uint16_t RxChannel3;
 static volatile uint16_t RxChannel4;
+
+static struct SETTINGS_S settings;
 /*** END VARIABLES ***/
 
 /*** BEGIN RECEIVER INTERRUPTS ***/
@@ -80,6 +83,7 @@ void receiverSetup()
   EICRA = _BV(ISC00) | _BV(ISC10);  // Any change INT0, INT1
   EIMSK = _BV(INT0) | _BV(INT1);    // External Interrupt Mask Register
 
+  settingsRead(&settings);
 }
 
 /*
@@ -96,14 +100,14 @@ int16_t fastdiv8(int16_t x) {
  * Copy, scale, and offset the Rx inputs from the interrupt-modified
  * variables.
  */
-void receiverGetChannels(struct RX_STATE_S *state)
+static void receiverGetChannelsClean(struct RX_STATE_S *state)
 {
-	ATOMIC_BLOCK(ATOMIC_RESTORESTATE){
-		state->roll = RxChannel1;
-		state->pitch = RxChannel2;
-		state->collective = RxChannel3;
-		state->yaw = RxChannel4;
-	}
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE){
+        state->roll = RxChannel1;
+        state->pitch = RxChannel2;
+        state->collective = RxChannel3;
+        state->yaw = RxChannel4;
+    }
 
     state->roll = fastdiv8(state->roll - 1520 * 8);
     state->pitch = fastdiv8(state->pitch - 1520 * 8);
@@ -114,13 +118,18 @@ void receiverGetChannels(struct RX_STATE_S *state)
 #endif
 }
 
-void receiverStickCenter()
+void receiverGetChannels(struct RX_STATE_S *state){
+    receiverGetChannelsClean(state);
+    state->roll -= settings.RxRollZero;
+    state->pitch -= settings.RxPitchZero;
+    state->yaw -= settings.RxYawZero;
+}
+
+void receiverStickCenterManual(void)
 {
   struct RX_STATE_S rxState;
   uint8_t i;
-  // TODO: move this to settings, so there will be no need to center sticks
-  //	manually
-  while(1) {
+  while(true) {
     receiverGetChannels(&rxState);
     i = abs(rxState.roll) + abs(rxState.pitch) + abs(rxState.yaw);
     LED = 0;
@@ -128,4 +137,23 @@ void receiverStickCenter()
     LED = 1;
     _delay_ms(i);
   }
+}
+
+void receiverStickCenterAutomatic(void){
+    struct RX_STATE_S rx;
+    receiverGetChannelsClean(&rx);
+    settingsRead(&settings);
+
+    settings.RxRollZero = rx.roll;
+    settings.RxPitchZero = rx.pitch;
+    settings.RxYawZero = rx.yaw;
+
+    settingsWrite(&settings);
+
+    while (1) {
+        LED = 0;
+        _delay_ms(100);
+        LED = 1;
+        _delay_ms(100);
+    }
 }

@@ -58,13 +58,20 @@ static void setup()
   bool rollMin =  (pots.roll  < (ADC_MAX * 5) / 100);    // 5% threshold
   bool yawMin =   (pots.yaw   < (ADC_MAX * 5) / 100);    // 5% threshold
 
-  if(pitchMin && rollMin && yawMin) { settingsClearAll(); }             // Clear config
-  else if(pitchMin && yawMin)       { motorsIdentify(); }               // Motor identification
-//  else if(pitchMin && rollMin)      { }                                 // Future use
-//  else if(rollMin && yawMin)        { }                                 // Future use
-  else if(pitchMin)                 { receiverStickCenter(); }          // Stick Centering Test
-  else if(rollMin)                  { gyrosReverse(); }                 // Gyro direction reversing
-  else if(yawMin)                   { motorsThrottleCalibration(); }    // ESC throttle calibration
+  // Clear config
+  if(pitchMin && rollMin && yawMin) { settingsClearAll(); }
+  // Motor identification
+  else if(pitchMin && yawMin)       { motorsIdentify(); }
+  // Automatic stick centering
+  else if(pitchMin && rollMin)      { receiverStickCenterAutomatic(); }
+  // Future use
+  //else if(rollMin && yawMin)      { }
+  // Stick Centering Test
+  else if(pitchMin)                 { receiverStickCenterManual(); }
+  // Gyro direction reversing
+  else if(rollMin)                  { gyrosReverse(); }
+  // ESC throttle calibration
+  else if(yawMin)                   { motorsThrottleCalibration(); }
 }
 
 static inline void main_loop()
