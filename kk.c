@@ -204,24 +204,24 @@ static inline void main_loop() {
                 >> GYRO_GAIN_SHIFT;
 
         if (Armed) {
-            if (0) {
-                error = rxState.roll - gyro.roll;
-                if (error > emax)
-                    error = emax;
-                else if (error < -emax)
-                    error = -emax;
-                integral.roll += error;
-                if (integral.roll > imax)
-                    integral.roll = imax;
-                else if (integral.roll < -imax)
-                    integral.roll = -imax;
-                derivative = error - last_error.roll;
-                last_error.roll = error;
-                rxState.roll += error + (integral.roll >> 2)
-                        + (derivative >> 2);
-            } else {
-                rxState.roll -= gyro.roll;
-            }
+#if 0
+            error = rxState.roll - gyro.roll;
+            if (error > emax)
+                error = emax;
+            else if (error < -emax)
+                error = -emax;
+            integral.roll += error;
+            if (integral.roll > imax)
+                integral.roll = imax;
+            else if (integral.roll < -imax)
+                integral.roll = -imax;
+            derivative = error - last_error.roll;
+            last_error.roll = error;
+            rxState.roll += error + (integral.roll >> 2)
+                    + (derivative >> 2);
+#else
+            rxState.roll -= gyro.roll;
+#endif
         }
 
 #ifdef SINGLE_COPTER
@@ -272,24 +272,24 @@ static inline void main_loop() {
                 >> GYRO_GAIN_SHIFT;
 
         if (Armed) {
-            if (0) {
-                error = rxState.pitch - gyro.pitch;
-                if (error > emax)
-                    error = emax;
-                else if (error < -emax)
-                    error = -emax;
-                integral.pitch += error;
-                if (integral.pitch > imax)
-                    integral.pitch = imax;
-                else if (integral.pitch < -imax)
-                    integral.pitch = -imax;
-                derivative = error - last_error.pitch;
-                last_error.pitch = error;
-                rxState.pitch += error + (integral.pitch >> 2) + (derivative
-                        >> 2);
-            } else {
-                rxState.pitch -= gyro.pitch;
-            }
+#if 0
+            error = rxState.pitch - gyro.pitch;
+            if (error > emax)
+                error = emax;
+            else if (error < -emax)
+                error = -emax;
+            integral.pitch += error;
+            if (integral.pitch > imax)
+                integral.pitch = imax;
+            else if (integral.pitch < -imax)
+                integral.pitch = -imax;
+            derivative = error - last_error.pitch;
+            last_error.pitch = error;
+            rxState.pitch += error + (integral.pitch >> 2) + (derivative
+                    >> 2);
+#else
+            rxState.pitch -= gyro.pitch;
+#endif
         }
 
 #ifdef SINGLE_COPTER
