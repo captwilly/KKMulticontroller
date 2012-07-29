@@ -63,7 +63,7 @@ void gyrosReadGainPots(struct GYRO_GAIN_ADC_S *pots)
 }
 
 
-void gyrosReadClean(struct GYRO_STATE_S *state)
+static void gyrosReadClean(struct GYRO_STATE_S *state)
 {
 	// read roll gyro
 	state->roll = read_adc(GYRO_ROLL_ADC_CH);
