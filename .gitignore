@@ -9,3 +9,6 @@
 *.map
 *.sym
 *.lss
+.project
+.cproject
+.settings/
