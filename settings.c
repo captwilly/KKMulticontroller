@@ -4,20 +4,23 @@
 #include "gyros.h"
 
 /*** BEGIN DEFINITIONS ***/
-#define EEPROM_SETTINGS_MAGIC	42
+#define EEPROM_SETTINGS_MAGIC	    42
+
 // Default settings
+#define DEFAULT_SETTINGS_INITIALIZER    \
+            .setup =                EEPROM_SETTINGS_MAGIC,                  \
+                                                                            \
+            .RollGyroDirection =    GYRO_REVERSED,                          \
+            .PitchGyroDirection =   GYRO_REVERSED,                          \
+            .YawGyroDirection =     GYRO_NORMAL,                            \
+                                                                            \
+            .RxRollZero =           0,                                      \
+            .RxPitchZero =          0,                                      \
+            .RxYawZero =            0,                                      \
+
+
 static struct SETTINGS_S default_settings
-        __attribute__((section(".eeprom"))) = {
-            .setup =                EEPROM_SETTINGS_MAGIC,
-
-            .RollGyroDirection =    GYRO_REVERSED,
-            .PitchGyroDirection =   GYRO_REVERSED,
-            .YawGyroDirection =     GYRO_NORMAL,
-
-            .RxRollZero =           0,
-            .RxPitchZero =          0,
-            .RxYawZero =            0,
-};
+        __attribute__((section(".eeprom"))) = { DEFAULT_SETTINGS_INITIALIZER };
 /*** END DEFINITIONS ***/
 
 void settingsWrite(struct SETTINGS_S *settings) {
@@ -26,18 +29,7 @@ void settingsWrite(struct SETTINGS_S *settings) {
 }
 
 static void settingsSetDefaults(void) {
-    struct SETTINGS_S settings;
-
-    settings.setup =                EEPROM_SETTINGS_MAGIC;
-
-    settings.RollGyroDirection =    GYRO_REVERSED;
-    settings.PitchGyroDirection =   GYRO_REVERSED;
-    settings.YawGyroDirection =     GYRO_NORMAL;
-
-    settings.RxRollZero =           0;
-    settings.RxPitchZero =          0;
-    settings.RxYawZero =            0;
-
+    struct SETTINGS_S settings = { DEFAULT_SETTINGS_INITIALIZER };
     settingsWrite(&settings);
 }
 
