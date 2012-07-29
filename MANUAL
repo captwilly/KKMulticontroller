@@ -1,0 +1,177 @@
+Contents:
+    - General motor output setup
+    - Receiver / Transmitter settings
+    - Run-time settings
+
+
+Receiver / Transmitter settings
+    Throttle      Pitch
+     ↑              ↑
+    ←☼→ Yaw        ←☼→ Roll
+     ↓              ↓
+
+General motor output setup:
+
+    Single
+                    M1 CCW
+                    |
+                    |
+        
+                    M2 (Servo)
+                    |
+                    |
+             M5 ---- ---- M3
+            (Servo) | (Servo)
+                    |
+                    M6/M4 (Servo)
+        
+    Dual
+                    M1 CCW
+                    |
+                    M2 CW
+                    |
+        
+                    |
+                    |
+          M5/M3 ----+----
+            (Servo) |
+                    |
+                 M6/M4 (Servo)
+        
+    Twin
+                 / --- \
+               /    |    \
+             M1 CW  |     M2 CCW
+                    |
+             M3     |       M4
+           (Servo)  |   (Servo)
+                    |
+                    |
+                    M5 (Tail Servo, Optional)
+                    M6 (Tail Servo Reverse, Optional)
+        
+    Tri
+              M1 CW     M2 CCW
+                \       /
+                 \.---./
+                  |   |
+                  `---'
+                    |
+                    |M4/M6 (Tail Servo)
+                    M3/M5 CCW
+        
+    Quad-+
+                   M1 CW
+                    |
+                    |
+                    |
+                  .---.
+        M2 CCW----|   |----M3/M5 CCW
+                  `---'
+                    |
+                    |
+                    |
+                  M4/M6 CW
+        
+    Quad-X
+        
+               M1 CW    M2 CCW
+                \        /
+                  \.--./
+                   |  |
+                  /`--'\
+                /        \
+            M4/M6 CCW   M3/M5 CW
+        
+    Hex
+                    M1 CW
+                    |
+            M6 CCW  |     M2 CCW
+              \     |     /
+                \ .---. /
+                 -|   |-
+                / `---' \
+              /     |     \
+            M5 CW   |     M3 CW
+                    |
+                    M4 CCW
+        
+    Y6
+        
+             M1,4        M2,5    M1->3 = CW
+                \       /        M4->6 = CCW
+                 \.---./
+                  |   |
+                  `---'
+                    |
+                    |
+                   M3,6
+
+
+
+Receiver / Transmitter settings:
+    Remote control schematic diagram (with channel names):
+          
+       Collective (Throttle)       Pitch (Aileron)
+                ↑                        ↑
+               ←☼→ Yaw (Rudder)         ←☼→ Roll (Elevator)
+                ↓                        ↓
+
+
+                   
+Run-time settings:
+    1. Clear all settings.
+        All settings will be cleared to their default values: 
+            - Roll Gyro reversed
+            - Pitch Gyro reversed
+            - Rx offsets are zero
+        Steps:    
+            a) power off
+            b) rotate all three potentiometers to minimal position (CCW)
+            c) power on and and wait LED start blinking
+            d) power off
+            e) rotate all three potentiometers away from minimal position 
+                (threshold is ~5%)
+        
+    2. Identify motors
+        Don't know what it is. But it doesn't change any settings.
+        Steps:
+            a) power off
+            b) rotate Pitch and Yaw potentiometers to minimal position (CCW)
+            .... this item lacks documentation ....
+            d) power off
+            e) rotate all three potentiometers away from minimal position 
+                (threshold is ~5%)
+    3. Automatic receiver stick centering.
+        Stick positions are read and saved in Non-Volatile memory (EEPROM) as 
+        zero offset.
+        Steps:
+            a) power off
+            b) rotate Pitch and Roll potentiometers to minimal position (CCW)
+            c) turn on transmitter, make sure all sticks (except Throttle) are
+                in middle position
+            c) power on and and wait LED start blinking
+            d) power off
+            e) rotate all three potentiometers away from minimal position 
+                (threshold is ~5%)
+    4. Gyros reverse.
+        Steps:
+            a) power off
+            b) rotate Roll potentiometer to minimal position (CCW)
+            .... this item lacks documentation ....
+            d) power off
+            e) rotate all three potentiometers away from minimal position 
+                (threshold is ~5%)
+    5. Motors Throttle calibration.
+        Calibration is actually performed in ESC.
+        Steps:
+            a) power off
+            b) rotate Yaw potentiometer to minimal position (CCW)
+            c) turn on transmitter, set Throttle channel to it's maximum value
+            d) power on
+            e) wait ESC beeps (refer to ESC manual)
+            f) set Throttle channel to it's maximum value
+            g) wait ESC beeps (refer to ESC manual)
+            h) power off
+            i) rotate all three potentiometers away from minimal position 
+                (threshold is ~5%)
