@@ -12,7 +12,7 @@
 #include "io_cfg.h"
 
 /* Multicopter Type */
-#if !defined(SINGLE_COPTER)	\
+#if !defined(SINGLE_COPTER) \
 	&& !defined(DUAL_COPTER) \
 	&& !defined(TWIN_COPTER) \
 	&& !defined(TRI_COPTER) \

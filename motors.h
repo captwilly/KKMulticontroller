@@ -43,16 +43,16 @@
 /*** END HELPER MACROS ***/
 
 /*** BEGIN TYPES ***/
-struct MT_STATE_S{
-	int16_t m1out;
-	int16_t m2out;
-	int16_t m3out;
-	int16_t m4out;
+struct MT_STATE_S {
+    int16_t m1out;
+    int16_t m2out;
+    int16_t m3out;
+    int16_t m4out;
 #if M5_USED
-	int16_t m5out;
+int16_t m5out;
 #endif
 #if M6_USED
-	int16_t m6out;
+int16_t m6out;
 #endif
 };
 /*** END TYPES ***/

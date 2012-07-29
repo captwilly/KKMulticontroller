@@ -17,13 +17,13 @@
 /*** END DEFINES ***/
 
 /*** BEGIN TYPES ***/
-struct RX_STATE_S{
-	int16_t roll;
-	int16_t pitch;
-	int16_t collective;
-	int16_t yaw;
+struct RX_STATE_S {
+    int16_t roll;
+    int16_t pitch;
+    int16_t collective;
+    int16_t yaw;
 #ifdef TWIN_COPTER
-	int16_t orgPitch;
+int16_t orgPitch;
 #endif
 };
 /*** END TYPES ***/

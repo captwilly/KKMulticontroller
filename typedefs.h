@@ -11,25 +11,24 @@
 #define INPUT 0
 #define OUTPUT 1
 
-typedef enum _BOOL { FALSE = 0, TRUE } BOOL;
+typedef enum _BOOL {
+    FALSE = 0, TRUE
+} BOOL;
 
 // Code courtesy of: stu_san on AVR Freaks
 
-typedef struct
-{
-  unsigned int bit0:1;
-  unsigned int bit1:1;
-  unsigned int bit2:1;
-  unsigned int bit3:1;
-  unsigned int bit4:1;
-  unsigned int bit5:1;
-  unsigned int bit6:1;
-  unsigned int bit7:1;
-} _io_reg; 
-
+typedef struct {
+    unsigned int bit0 :1;
+    unsigned int bit1 :1;
+    unsigned int bit2 :1;
+    unsigned int bit3 :1;
+    unsigned int bit4 :1;
+    unsigned int bit5 :1;
+    unsigned int bit6 :1;
+    unsigned int bit7 :1;
+} _io_reg;
 
 #define REGISTER_BIT(rg,bt) ((volatile _io_reg*)&rg)->bit##bt
-
 
 /* Example:
 
@@ -38,25 +37,24 @@ typedef struct
 
 #define BUTTON_DIR  REGISTER_BIT(DDRB,3)
 #define LED_DIR     REGISTER_BIT(DDRB,4)
- 
-main() 
-{
-	uint8_t is_button = BUTTON_PIN;
-	// this actually is expanded by the C preprocessor to:
-	// uint8_t is_button = ((volatile _io_reg*)&PINB)->bit3; 
 
-  LED_DIR = 1;
-	// which after the preprocessor looks like: 
-	// ((volatile _io_reg*)&DDRB)->bit4 = 1; 
+int main(void) {
+    uint8_t is_button = BUTTON_PIN;
+    // this actually is expanded by the C preprocessor to:
+    // uint8_t is_button = ((volatile _io_reg*)&PINB)->bit3;
 
-  BUTTON_DIR = 0;
+    LED_DIR = 1;
+    // which after the preprocessor looks like:
+    // ((volatile _io_reg*)&DDRB)->bit4 = 1;
 
-  while (1) {
-    LED_PORT = BUTTON_PIN;
-  }
-} 
+    BUTTON_DIR = 0;
 
-*/
+    while (true) {
+        LED_PORT = BUTTON_PIN;
+    }
+    return 1;
+}
 
+ */
 
 #endif

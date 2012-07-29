@@ -25,17 +25,20 @@
 /*** END HELPER MACROS ***/
 
 /*** BEGIN TYPES ***/
-enum GyroDirection { GYRO_NORMAL = 0, GYRO_REVERSED };
-
-struct GYRO_GAIN_ADC_S{
-	uint16_t roll;
-	uint16_t pitch;
-	uint16_t yaw;
+enum GyroDirection {
+    GYRO_NORMAL = 0,
+    GYRO_REVERSED
 };
-struct GYRO_STATE_S{
-	int16_t roll;
-	int16_t pitch;
-	int16_t yaw;
+
+struct GYRO_GAIN_ADC_S {
+    uint16_t roll;
+    uint16_t pitch;
+    uint16_t yaw;
+};
+struct GYRO_STATE_S {
+    int16_t roll;
+    int16_t pitch;
+    int16_t yaw;
 };
 /*** END TYPES ***/
 
