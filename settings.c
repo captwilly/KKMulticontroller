@@ -1,7 +1,8 @@
 #include "settings.h"
 
-#include <avr/eeprom.h>
 #include "gyros.h"
+#include <avr/eeprom.h>
+#include <util/delay.h>
 
 /*** BEGIN DEFINITIONS ***/
 #define EEPROM_SETTINGS_MAGIC	    42

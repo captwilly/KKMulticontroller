@@ -1,8 +1,12 @@
 #include "common.h"
+
 #include "gyros.h"
 #include "settings.h"
 #include "receiver.h"
 #include "motors.h"
+#include <stdlib.h>
+#include <util/delay.h>
+#include <avr/interrupt.h>
 
 
 FUSES = {

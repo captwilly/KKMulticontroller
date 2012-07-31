@@ -1,8 +1,9 @@
 #include "receiver.h"
 
 #include "settings.h"
-#include "util/atomic.h"
-#include "util/delay.h"
+#include <stdlib.h>
+#include <util/atomic.h>
+#include <util/delay.h>
 
 /*** BEGIN VARIABLES ***/
 static volatile uint16_t RxChannel1;

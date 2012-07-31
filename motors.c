@@ -1,6 +1,8 @@
 #include "motors.h"
 
 #include "receiver.h"
+#include <avr/interrupt.h>
+#include <util/delay.h>
 
 #if defined(SINGLE_COPTER) \
     || defined(DUAL_COPTER) \

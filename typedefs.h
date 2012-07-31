@@ -2,6 +2,7 @@
 #define TYPE_DEFS_H_
 
 #include <stdint.h>
+#include <stdbool.h>
 
 //set bit	or PORTB |= (1<<3); 
 //#define set_bit(port, bit) ((port) |= (uint8_t)(1 << bit))

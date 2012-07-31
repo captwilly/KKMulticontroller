@@ -4,6 +4,7 @@
 #include "settings.h"
 #include "adc.h"
 #include <string.h>
+#include <util/delay.h>
 
 /*** BEGIN VARIABLES ***/
 static struct GYRO_STATE_S gyroZeroPoint;
