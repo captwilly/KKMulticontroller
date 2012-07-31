@@ -1,24 +1,8 @@
 #ifndef MOTORS_H
 #define MOTORS_H
 
-#include "config.h"
+#include "common.h"
 
-/*** BEGIN DEFINES ***/
-//#define SERVO_REVERSE
-
-/*
- * ESC PPM output rate -
- * Do not set lower than 122 Hz without a slower/higher t0/t1 clkdiv
- * as the period needs to fit in the 16-bit timer.
- */
-//#define ESC_RATE 300  // in Hz
-//#define ESC_RATE 400  // in Hz (at SINGLE_COPTER Only)
-#define ESC_RATE 450  // in Hz
-//#define ESC_RATE 495  // in Hz
-
-// NOTE: Set to 50 for analog servos, 250 for digital servos.
-#define SERVO_RATE 50  // in Hz
-/*** END DEFINES ***/
 
 /*** BEGIN HELPER MACROS ***/
 #define PWM_LOW_PULSE_US ((1000000 / ESC_RATE) - 2000)

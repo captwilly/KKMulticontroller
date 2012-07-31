@@ -1,7 +1,7 @@
 #ifndef SETTINGS_H
 #define SETTINGS_H
 
-#include "config.h"
+#include "common.h"
 
 /*** BEGIN TYPES ***/
 // eeProm data structure

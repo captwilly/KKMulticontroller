@@ -1,4 +1,4 @@
-#include "config.h"
+#include "common.h"
 #include "gyros.h"
 #include "settings.h"
 #include "receiver.h"
