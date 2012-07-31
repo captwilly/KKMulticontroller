@@ -39,6 +39,14 @@
 #define GAIN_ROLL_ADC_CH    3
 #define GAIN_PITCH_ADC_CH   4
 #define GAIN_YAW_ADC_CH     5
+#define ADC_CHANNELS_MASK	(\
+                                _BV(GYRO_YAW_ADC_CH) |      \
+                                _BV(GYRO_PITCH_ADC_CH) |    \
+                                _BV(GYRO_ROLL_ADC_CH) |     \
+                                _BV(GAIN_ROLL_ADC_CH) |     \
+                                _BV(GAIN_PITCH_ADC_CH) |    \
+                                _BV(GAIN_YAW_ADC_CH)        \
+                            )
 
 #define M1                  REGISTER_BIT(PORTB,2)
 #define M2                  REGISTER_BIT(PORTB,1)

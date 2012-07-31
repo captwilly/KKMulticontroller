@@ -2,24 +2,14 @@
 
 #include "receiver.h"
 #include "settings.h"
-#include "string.h"
-
-/*** BEGIN PROTOTYPES ***/
-static void init_adc(void);
-static uint16_t read_adc(uint8_t channel);
-/*** END PROTOTYPES ***/
+#include "adc.h"
+#include <string.h>
 
 /*** BEGIN VARIABLES ***/
 static struct GYRO_STATE_S gyroZeroPoint;
 static struct SETTINGS_S settings;
 /*** END VARIABLES ***/
 
-void init_adc(void) {
-    // Digital Input Disable Register - ADC5..0 Digital Input Disable
-    DIDR0 = 0b00111111;
-    // ADC Control and Status Register B - ADTS2:0
-    ADCSRB = 0b00000000;
-}
 
 void gyrosSetup(void) {
     GYRO_YAW_DIR    = INPUT;
@@ -29,18 +19,8 @@ void gyrosSetup(void) {
     GAIN_PITCH_DIR  = INPUT;
     GAIN_ROLL_DIR   = INPUT;
 
-    init_adc();
+    adc_init();
     settingsRead(&settings);
-}
-
-uint16_t read_adc(uint8_t channel) {
-    ADMUX = channel; // set channel
-    ADCSRA = _BV(ADEN) | _BV(ADSC) | _BV(ADPS1) | _BV(ADPS2); // 0b11000110
-
-    // wait to complete
-    while (ADCSRA & _BV(ADSC));
-
-    return ADCW;
 }
 
 /*
@@ -51,27 +31,27 @@ uint16_t read_adc(uint8_t channel) {
  */
 void gyrosReadGainPots(struct GYRO_GAIN_ADC_S *pots) {
     // read roll gain
-    pots->roll = GAIN_POT_REVERSE read_adc(GAIN_ROLL_ADC_CH);
+    pots->roll = GAIN_POT_REVERSE adc_read(GAIN_ROLL_ADC_CH);
 
     // read pitch gain
-    pots->pitch = GAIN_POT_REVERSE read_adc(GAIN_PITCH_ADC_CH);
+    pots->pitch = GAIN_POT_REVERSE adc_read(GAIN_PITCH_ADC_CH);
 
     // read yaw gain
-    pots->yaw = GAIN_POT_REVERSE read_adc(GAIN_YAW_ADC_CH);
+    pots->yaw = GAIN_POT_REVERSE adc_read(GAIN_YAW_ADC_CH);
 }
 
 static void gyrosReadClean(struct GYRO_STATE_S *state) {
     // read roll gyro
-    state->roll = read_adc(GYRO_ROLL_ADC_CH);
+    state->roll = adc_read(GYRO_ROLL_ADC_CH);
 
     // read pitch gyro
-    state->pitch = read_adc(GYRO_PITCH_ADC_CH);
+    state->pitch = adc_read(GYRO_PITCH_ADC_CH);
 
 #ifdef EXTERNAL_YAW_GYRO
     state->yaw = 0;
 #else
     // read yaw gyro
-    state->yaw = read_adc(GYRO_YAW_ADC_CH);
+    state->yaw = adc_read(GYRO_YAW_ADC_CH);
 #endif
 }
 
