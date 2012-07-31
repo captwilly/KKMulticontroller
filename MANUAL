@@ -4,12 +4,6 @@ Contents:
     - Run-time settings
 
 
-Receiver / Transmitter settings
-    Throttle      Pitch
-     ↑              ↑
-    ←☼→ Yaw        ←☼→ Roll
-     ↓              ↓
-
 General motor output setup:
 
     Single
