@@ -1,8 +1,8 @@
 #include "motors.h"
 
 #include "receiver.h"
-#include <avr/interrupt.h>
 #include <util/delay.h>
+#include <util/atomic.h>
 
 #if defined(SINGLE_COPTER) \
     || defined(DUAL_COPTER) \
@@ -144,15 +144,15 @@ void motorOutputPPM(struct MT_STATE_S *state) {
      * We turn OFF the pins here, then wait for the ON cycle start.
      */
     t = MotorStartTCNT1 + state->m1out;
-    asm(""::"r" (t));
-    /* Avoid reordering of add after cli */cli();
-    OCR1B = t;
-    sei();
+    asm(""::"r" (t)); // Avoid reordering of add after cli
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+        OCR1B = t;
+    }
     t = MotorStartTCNT1 + state->m2out;
-    asm(""::"r" (t));
-    /* Avoid reordering of add after cli */cli();
-    OCR1A = t;
-    sei();
+    asm(""::"r" (t)); // Avoid reordering of add after cli
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+        OCR1A = t;
+    }
     TCCR1A = _BV(COM1A1) | _BV(COM1B1); /* Next match will clear pins */
 
     /*
@@ -174,9 +174,9 @@ void motorOutputPPM(struct MT_STATE_S *state) {
 #endif
 
     do {
-        cli();
-        t = TCNT1;
-        sei();
+        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+            t = TCNT1;
+        }
         t -= MotorStartTCNT1;
         if (t >= state->m3out)
             M3 = 0;
@@ -216,9 +216,9 @@ void motorOutputPPM(struct MT_STATE_S *state) {
 
     MotorStartTCNT1 += (2000 + PWM_LOW_PULSE_US) << 3;
 #if 0
-    cli();
-    t = TCNT1;
-    sei();
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+        t = TCNT1;
+    }
     t+= 0x3f;
     t-= MotorStartTCNT1;
     if(t >= 0) {
@@ -226,21 +226,21 @@ void motorOutputPPM(struct MT_STATE_S *state) {
          * We've already passed the on cycle, hmm.
          * Push it into the future.
          */
-        cli();
-        t = TCNT1;
-        sei();
+        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+            t = TCNT1;
+        }
         MotorStartTCNT1 = t + 0xff;
     }
 #endif
     t = MotorStartTCNT1;
-    cli();
-    OCR1B = t;
-    sei();
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+        OCR1B = t;
+    }
     OCR0A = t;
     OCR0B = t;
-    cli();
-    OCR1A = t;
-    sei();
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+        OCR1A = t;
+    }
 
 #ifdef SINGLE_COPTER
     if(servo_skip == 0) {
@@ -284,9 +284,9 @@ void motorOutputPPM(struct MT_STATE_S *state) {
      * Wait for the on time so we can turn on the software pins.
      */
     do {
-        cli();
-        t = TCNT1;
-        sei();
+        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+            t = TCNT1;
+        }
         t -= MotorStartTCNT1;
     } while (t < 0);
 
@@ -444,6 +444,7 @@ void motorsThrottleCalibration() {
 #else
 #error No Copter configuration defined !!!!
 #endif
-        motorOutputPPM(&motors); // this regulates rate at which we output signals
+        // this regulates rate at which we output signals
+        motorOutputPPM(&motors);
     }
 }
