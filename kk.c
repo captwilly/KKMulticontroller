@@ -180,14 +180,55 @@ static inline void main_loop() {
         }
         else {
             gyrosRead(&gyro);
+            gyrosReadGainPots(&pots);
 
-            //--- Start mixing by setting collective to motor outputs
+            // Start mixing
 
             rxState.collective = (rxState.collective * 10) >> 3; // 0-800 -> 0-1000
 
+            imax = MAX(rxState.collective, 0);
+            imax >>= 3; /* 1000 -> 200 */
+
+            /* Calculate roll output - Test without props!! */
+            rxState.roll = ((int32_t) rxState.roll * (uint32_t) pots.roll)
+                    >> STICK_GAIN_SHIFT;
+            gyro.roll = ((int32_t) gyro.roll * (uint32_t) pots.roll)
+                    >> GYRO_GAIN_SHIFT;
+            rxState.roll -= gyro.roll;
+
+
+            /* Calculate pitch output - Test without props!! */
+            rxState.pitch = ((int32_t) rxState.pitch * (uint32_t) pots.pitch)
+                    >> STICK_GAIN_SHIFT;
+            gyro.pitch = ((int32_t) gyro.pitch * (uint32_t) pots.pitch)
+                    >> GYRO_GAIN_SHIFT;
+            rxState.pitch -= gyro.pitch;
+
+
+            /* Calculate yaw output - Test without props!! */
+            rxState.yaw = ((int32_t) rxState.yaw * (uint32_t) pots.yaw)
+                    >> STICK_GAIN_SHIFT;
+            gyro.yaw = ((int32_t) gyro.yaw * (uint32_t) pots.yaw)
+                    >> GYRO_GAIN_SHIFT;
+
+            error = rxState.yaw - gyro.yaw;
+            if (error > emax)
+                error = emax;
+            else if (error < -emax)
+                error = -emax;
+            integral.yaw += error;
+            if (integral.yaw > imax)
+                integral.yaw = imax;
+            else if (integral.yaw < -imax)
+                integral.yaw = -imax;
+            derivative = error - last_error.yaw;
+            last_error.yaw = error;
+            rxState.yaw += error + (integral.yaw >> 4) + (derivative >> 4);
+
+
+            // Apply calculation results to motors output
 #ifndef SINGLE_COPTER
-            if (rxState.collective > MAX_COLLECTIVE)
-                rxState.collective = MAX_COLLECTIVE;
+            rxState.collective = MIN(rxState.collective, MAX_COLLECTIVE);
 #endif
 
 #ifdef SINGLE_COPTER
@@ -232,39 +273,6 @@ static inline void main_loop() {
             motors.m6out = rxState.collective;
 #endif
 
-            imax = rxState.collective;
-            if (imax < 0)
-                imax = 0;
-            imax >>= 3; /* 1000 -> 200 */
-
-            /* Calculate roll output - Test without props!! */
-
-            gyrosReadGainPots(&pots);
-
-            rxState.roll = ((int32_t) rxState.roll * (uint32_t) pots.roll)
-                    >> STICK_GAIN_SHIFT;
-            gyro.roll = ((int32_t) gyro.roll * (uint32_t) pots.roll)
-                    >> GYRO_GAIN_SHIFT;
-
-#if 0
-            error = rxState.roll - gyro.roll;
-            if (error > emax)
-                error = emax;
-            else if (error < -emax)
-                error = -emax;
-            integral.roll += error;
-            if (integral.roll > imax)
-                integral.roll = imax;
-            else if (integral.roll < -imax)
-                integral.roll = -imax;
-            derivative = error - last_error.roll;
-            last_error.roll = error;
-            rxState.roll += error + (integral.roll >> 2)
-                    + (derivative >> 2);
-#else
-            rxState.roll -= gyro.roll;
-#endif
-
 #ifdef SINGLE_COPTER
             motors.m2out += rxState.roll;
             motors.m4out -= rxState.roll;
@@ -303,32 +311,6 @@ static inline void main_loop() {
             motors.m2out += rxState.roll;
             motors.m3out -= rxState.roll;
             motors.m4out -= rxState.roll;
-#endif
-
-            /* Calculate pitch output - Test without props!! */
-
-            rxState.pitch = ((int32_t) rxState.pitch * (uint32_t) pots.pitch)
-                    >> STICK_GAIN_SHIFT;
-            gyro.pitch = ((int32_t) gyro.pitch * (uint32_t) pots.pitch)
-                    >> GYRO_GAIN_SHIFT;
-
-#if 0
-            error = rxState.pitch - gyro.pitch;
-            if (error > emax)
-                error = emax;
-            else if (error < -emax)
-                error = -emax;
-            integral.pitch += error;
-            if (integral.pitch > imax)
-                integral.pitch = imax;
-            else if (integral.pitch < -imax)
-                integral.pitch = -imax;
-            derivative = error - last_error.pitch;
-            last_error.pitch = error;
-            rxState.pitch += error + (integral.pitch >> 2) + (derivative
-                    >> 2);
-#else
-            rxState.pitch -= gyro.pitch;
 #endif
 
 #ifdef SINGLE_COPTER
@@ -380,26 +362,6 @@ static inline void main_loop() {
             motors.m4out += rxState.pitch;
 #endif
 
-            /* Calculate yaw output - Test without props!! */
-
-            rxState.yaw = ((int32_t) rxState.yaw * (uint32_t) pots.yaw)
-                    >> STICK_GAIN_SHIFT;
-            gyro.yaw = ((int32_t) gyro.yaw * (uint32_t) pots.yaw)
-                    >> GYRO_GAIN_SHIFT;
-
-            error = rxState.yaw - gyro.yaw;
-            if (error > emax)
-                error = emax;
-            else if (error < -emax)
-                error = -emax;
-            integral.yaw += error;
-            if (integral.yaw > imax)
-                integral.yaw = imax;
-            else if (integral.yaw < -imax)
-                integral.yaw = -imax;
-            derivative = error - last_error.yaw;
-            last_error.yaw = error;
-            rxState.yaw += error + (integral.yaw >> 4) + (derivative >> 4);
 
 #ifdef SINGLE_COPTER
             motors.m2out += rxState.yaw;
@@ -460,11 +422,9 @@ static inline void main_loop() {
              * motors. This gives priority to stabilization without a fixed
              * collective limit.
              */
-            imax = motors.m1out;
-            if(motors.m2out > imax)
-            imax = motors.m2out;
-            if(motors.m3out > imax)
-            imax = motors.m3out;
+            imax = MAX(motors.m1out, motors.m2out);
+            imax = MAX(motors.m3out, imax);
+
             imax -= 1000;
             if(imax > 0) {
                 motors.m1out -= imax;
@@ -473,25 +433,21 @@ static inline void main_loop() {
             }
 #endif
 
-            imax = 114;
-            //--- Limit the lowest value to avoid stopping of motor if motor value is under-saturated ---
-            if (motors.m1out < imax)
-                motors.m1out = imax; // this is the motor idle level
-            if (motors.m2out < imax)
-                motors.m2out = imax;
-#if defined(TRI_COPTER) || defined(QUAD_COPTER) || defined(QUAD_X_COPTER) || defined(Y4_COPTER)
-            if (motors.m3out < imax)
-                motors.m3out = imax;
+            /* Limit the lowest value to avoid stopping of motor if motor value
+             *  is under-saturated */
+            motors.m1out = MAX(MOTOR_LOWEST_VALUE, motors.m1out);
+            motors.m2out = MAX(MOTOR_LOWEST_VALUE, motors.m2out);
+
+#if defined(TRI_COPTER) || defined(QUAD_COPTER) || defined(QUAD_X_COPTER) || \
+    defined(Y4_COPTER)
+            motors.m3out = MAX(MOTOR_LOWEST_VALUE, motors.m3out);
 #endif
 #if defined(QUAD_COPTER) || defined(QUAD_X_COPTER) || defined(Y4_COPTER)
-            if (motors.m4out < imax)
-                motors.m4out = imax;
+            motors.m4out = MAX(MOTOR_LOWEST_VALUE, motors.m4out);
 #endif
 #if defined(HEX_COPTER) || defined(Y6_COPTER)
-            if(motors.m5out < imax)
-            motors.m5out = imax;
-            if(motors.m6out < imax)
-            motors.m6out = imax;
+            motors.m5out = MAX(MOTOR_LOWEST_VALUE, motors.m5out);
+            motors.m6out = MAX(MOTOR_LOWEST_VALUE, motors.m6out);
 #endif
 
             LED = 0;

@@ -64,4 +64,7 @@
 // this allows gyros to stabilise better when full throttle applied
 #define MAX_COLLECTIVE 1000      // 95
 
+// Lowest values at which motor is still rotating
+#define MOTOR_LOWEST_VALUE  114
+
 #endif /* CONFIG_H_ */

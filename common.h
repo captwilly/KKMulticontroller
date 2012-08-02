@@ -6,4 +6,19 @@
 #include "io_cfg.h"
 #include "config.h"
 
+
+// Safe MAX and MIN macro implementation got from:
+//  http://gcc.gnu.org/onlinedocs/gcc-3.4.6/gcc/Typeof.html
+#define MAX(a,b)    ({                                                      \
+        __typeof__ (a) _a = (a);                                            \
+        __typeof__ (b) _b = (b);                                            \
+        _a > _b ? _a : _b;                                                  \
+    })
+#define MIN(a,b)    ({                                                      \
+        __typeof__ (a) _a = (a);                                            \
+        __typeof__ (b) _b = (b);                                            \
+        _a < _b ? _a : _b;                                                  \
+    })
+
+
 #endif /* COMMON_H_ */
