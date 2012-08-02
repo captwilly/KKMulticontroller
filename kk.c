@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <util/delay.h>
 #include <avr/interrupt.h>
+#include <string.h>
 
 
 FUSES = {
@@ -89,6 +90,41 @@ static void setup() {
     }
 }
 
+void setMotorZero(
+#if defined(DUAL_COPTER) || defined(TWIN_COPTER) || defined(TRI_COPTER)
+        bool returnToInitState
+#else
+        void
+#endif
+    ){
+    struct MT_STATE_S motors;
+
+    memset(&motors, 0, sizeof(struct MT_STATE_S));
+
+#ifdef SINGLE_COPTER
+            motors.m2out = 840;
+            motors.m3out = 840;
+            motors.m4out = 840;
+            motors.m5out = 840;
+#elif defined(DUAL_COPTER)
+            if(returnToInitState) {
+                motors.m3out = 500;
+                motors.m4out = 500;
+            }
+#elif defined(TWIN_COPTER)
+            if(returnToInitState) {
+                motors.m3out = 500;
+                motors.m4out = 500;
+                motors.m5out = 500;
+                motors.m6out = 500;
+            }
+#elif defined(TRI_COPTER)
+            if(returnToInitState)
+            motors.m4out = 500;
+#endif
+            motorOutputPPM(&motors);
+}
+
 static inline void main_loop() {
     static bool Armed = false;
     static uint16_t Change_Arming = 0;
@@ -136,48 +172,11 @@ static inline void main_loop() {
             }
 
             /* turn off motors */
-#ifdef SINGLE_COPTER
-            motors.m1out = 0;
-            motors.m2out = 840;
-            motors.m3out = 840;
-            motors.m4out = 840;
-            motors.m5out = 840;
-#elif defined(DUAL_COPTER)
-            motors.m1out = 0;
-            motors.m2out = 0;
-            if(!Armed) {
-                motors.m3out = 500;
-                motors.m4out = 500;
-            }
-#elif defined(TWIN_COPTER)
-            motors.m1out = 0;
-            motors.m2out = 0;
-            if(!Armed) {
-                motors.m3out = 500;
-                motors.m4out = 500;
-                motors.m5out = 500;
-                motors.m6out = 500;
-            }
-#elif defined(TRI_COPTER)
-            motors.m1out = 0;
-            motors.m2out = 0;
-            motors.m3out = 0;
-            if(!Armed)
-            motors.m4out = 500;
-#elif defined(QUAD_COPTER) || defined(QUAD_X_COPTER) || defined(Y4_COPTER)
-            motors.m1out = 0;
-            motors.m2out = 0;
-            motors.m3out = 0;
-            motors.m4out = 0;
-#elif defined(HEX_COPTER) ||  defined(Y6_COPTER)
-            motors.m1out = 0;
-            motors.m2out = 0;
-            motors.m3out = 0;
-            motors.m4out = 0;
-            motors.m5out = 0;
-            motors.m6out = 0;
+#if defined(DUAL_COPTER) || defined(TWIN_COPTER) || defined(TRI_COPTER)
+            setMotorZero(!Armed);
+#else
+            setMotorZero();
 #endif
-            motorOutputPPM(&motors);
         }
         else {
             gyrosRead(&gyro);
