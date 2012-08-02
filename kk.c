@@ -246,26 +246,24 @@ static inline void main_loop() {
             gyro.roll = ((int32_t) gyro.roll * (uint32_t) pots.roll)
                     >> GYRO_GAIN_SHIFT;
 
-            if (Armed) {
 #if 0
-                error = rxState.roll - gyro.roll;
-                if (error > emax)
-                    error = emax;
-                else if (error < -emax)
-                    error = -emax;
-                integral.roll += error;
-                if (integral.roll > imax)
-                    integral.roll = imax;
-                else if (integral.roll < -imax)
-                    integral.roll = -imax;
-                derivative = error - last_error.roll;
-                last_error.roll = error;
-                rxState.roll += error + (integral.roll >> 2)
-                        + (derivative >> 2);
+            error = rxState.roll - gyro.roll;
+            if (error > emax)
+                error = emax;
+            else if (error < -emax)
+                error = -emax;
+            integral.roll += error;
+            if (integral.roll > imax)
+                integral.roll = imax;
+            else if (integral.roll < -imax)
+                integral.roll = -imax;
+            derivative = error - last_error.roll;
+            last_error.roll = error;
+            rxState.roll += error + (integral.roll >> 2)
+                    + (derivative >> 2);
 #else
-                rxState.roll -= gyro.roll;
+            rxState.roll -= gyro.roll;
 #endif
-            }
 
 #ifdef SINGLE_COPTER
             motors.m2out += rxState.roll;
@@ -314,26 +312,24 @@ static inline void main_loop() {
             gyro.pitch = ((int32_t) gyro.pitch * (uint32_t) pots.pitch)
                     >> GYRO_GAIN_SHIFT;
 
-            if (Armed) {
 #if 0
-                error = rxState.pitch - gyro.pitch;
-                if (error > emax)
-                    error = emax;
-                else if (error < -emax)
-                    error = -emax;
-                integral.pitch += error;
-                if (integral.pitch > imax)
-                    integral.pitch = imax;
-                else if (integral.pitch < -imax)
-                    integral.pitch = -imax;
-                derivative = error - last_error.pitch;
-                last_error.pitch = error;
-                rxState.pitch += error + (integral.pitch >> 2) + (derivative
-                        >> 2);
+            error = rxState.pitch - gyro.pitch;
+            if (error > emax)
+                error = emax;
+            else if (error < -emax)
+                error = -emax;
+            integral.pitch += error;
+            if (integral.pitch > imax)
+                integral.pitch = imax;
+            else if (integral.pitch < -imax)
+                integral.pitch = -imax;
+            derivative = error - last_error.pitch;
+            last_error.pitch = error;
+            rxState.pitch += error + (integral.pitch >> 2) + (derivative
+                    >> 2);
 #else
-                rxState.pitch -= gyro.pitch;
+            rxState.pitch -= gyro.pitch;
 #endif
-            }
 
 #ifdef SINGLE_COPTER
             motors.m3out += rxState.pitch;
@@ -391,21 +387,19 @@ static inline void main_loop() {
             gyro.yaw = ((int32_t) gyro.yaw * (uint32_t) pots.yaw)
                     >> GYRO_GAIN_SHIFT;
 
-            if (Armed) {
-                error = rxState.yaw - gyro.yaw;
-                if (error > emax)
-                    error = emax;
-                else if (error < -emax)
-                    error = -emax;
-                integral.yaw += error;
-                if (integral.yaw > imax)
-                    integral.yaw = imax;
-                else if (integral.yaw < -imax)
-                    integral.yaw = -imax;
-                derivative = error - last_error.yaw;
-                last_error.yaw = error;
-                rxState.yaw += error + (integral.yaw >> 4) + (derivative >> 4);
-            }
+            error = rxState.yaw - gyro.yaw;
+            if (error > emax)
+                error = emax;
+            else if (error < -emax)
+                error = -emax;
+            integral.yaw += error;
+            if (integral.yaw > imax)
+                integral.yaw = imax;
+            else if (integral.yaw < -imax)
+                integral.yaw = -imax;
+            derivative = error - last_error.yaw;
+            last_error.yaw = error;
+            rxState.yaw += error + (integral.yaw >> 4) + (derivative >> 4);
 
 #ifdef SINGLE_COPTER
             motors.m2out += rxState.yaw;
@@ -499,11 +493,6 @@ static inline void main_loop() {
             if(motors.m6out < imax)
             motors.m6out = imax;
 #endif
-
-            //--- Output to motor ESC's ---
-            if (rxState.collective < 1 || !Armed) {
-
-            }
 
             LED = 0;
             motorOutputPPM(&motors);
