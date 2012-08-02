@@ -227,21 +227,37 @@ static inline void main_loop() {
 
 
             // Apply calculation results to motors output
-#ifndef SINGLE_COPTER
-            rxState.collective = MIN(rxState.collective, MAX_COLLECTIVE);
-#endif
-
 #ifdef SINGLE_COPTER
+            rxState.collective = MIN(rxState.collective, MAX_COLLECTIVE);
+
             motors.m1out = rxState.collective;
             motors.m2out = 840; // 840
             motors.m3out = 840; // 840
             motors.m4out = 945; // 840 + 840/8
             motors.m5out = 945; // 840 + 840/8
+
+            motors.m2out += rxState.roll;
+            motors.m4out -= rxState.roll;
+
+            motors.m3out += rxState.pitch;
+            motors.m5out -= rxState.pitch;
+
+            motors.m2out += rxState.yaw;
+            motors.m3out += rxState.yaw;
+            motors.m4out += rxState.yaw;
+            motors.m5out += rxState.yaw;
 #elif defined(DUAL_COPTER)
             motors.m1out = rxState.collective;
             motors.m2out = rxState.collective;
             motors.m3out = 500;
             motors.m4out = 500;
+
+            motors.m4out += rxState.roll;
+
+            motors.m3out += rxState.pitch;
+
+            motors.m1out -= rxState.yaw;
+            motors.m2out += rxState.yaw;
 #elif defined(TWIN_COPTER)
             motors.m1out = rxState.collective;
             motors.m2out = rxState.collective;
@@ -249,144 +265,89 @@ static inline void main_loop() {
             motors.m4out = 500;
             motors.m5out = 500; // Optional
             motors.m6out = 500; // Optional
-#elif defined(TRI_COPTER)
-            motors.m1out = rxState.collective;
-            motors.m2out = rxState.collective;
-            motors.m3out = rxState.collective;
-            motors.m4out = 500;
-#elif defined(QUAD_COPTER) || defined(QUAD_X_COPTER)
-            motors.m1out = rxState.collective;
-            motors.m2out = rxState.collective;
-            motors.m3out = rxState.collective;
-            motors.m4out = rxState.collective;
-#elif defined(Y4_COPTER)
-            motors.m1out = rxState.collective;
-            motors.m2out = rxState.collective;
-            motors.m3out = rxState.collective * 3 / 4; // 25% Down
-            motors.m4out = rxState.collective * 3 / 4; // 25% Down
-#elif defined(HEX_COPTER) ||  defined(Y6_COPTER)
-            motors.m1out = rxState.collective;
-            motors.m2out = rxState.collective;
-            motors.m3out = rxState.collective;
-            motors.m4out = rxState.collective;
-            motors.m5out = rxState.collective;
-            motors.m6out = rxState.collective;
-#endif
 
-#ifdef SINGLE_COPTER
-            motors.m2out += rxState.roll;
-            motors.m4out -= rxState.roll;
-#elif defined(DUAL_COPTER)
-            motors.m4out += rxState.roll;
-#elif defined(TWIN_COPTER)
             rxState.roll = (rxState.roll * 7) >> 3; // Approximation of sin(60) without div
             motors.m1out += rxState.roll;
             motors.m2out -= rxState.roll;
-#elif defined(TRI_COPTER)
-            rxState.roll = (rxState.roll * 7) >> 3; // (.875 versus .86602540)
-            motors.m1out += rxState.roll;
-            motors.m2out -= rxState.roll;
-#elif defined(QUAD_COPTER)
-            motors.m2out += rxState.roll;
-            motors.m3out -= rxState.roll;
-#elif defined(QUAD_X_COPTER)
-            rxState.roll = rxState.roll >> 1;
-            motors.m1out += rxState.roll;
-            motors.m2out -= rxState.roll;
-            motors.m3out -= rxState.roll;
-            motors.m4out += rxState.roll;
-#elif defined(Y4_COPTER)
-            rxState.roll = (rxState.roll * 7) >> 3;
-            motors.m1out += rxState.roll;
-            motors.m2out -= rxState.roll;
-#elif defined(HEX_COPTER)
-            rxState.roll = (rxState.roll * 7) >> 3;
-            motors.m2out -= rxState.roll;
-            motors.m3out -= rxState.roll;
-            motors.m5out += rxState.roll;
-            motors.m6out += rxState.roll;
-#elif defined(Y6_COPTER)
-            rxState.roll = (rxState.roll * 7) >> 3;
-            motors.m1out += rxState.roll;
-            motors.m2out += rxState.roll;
-            motors.m3out -= rxState.roll;
-            motors.m4out -= rxState.roll;
-#endif
 
-#ifdef SINGLE_COPTER
-            motors.m3out += rxState.pitch;
-            motors.m5out -= rxState.pitch;
-#elif defined(DUAL_COPTER)
-            motors.m3out += rxState.pitch;
-#elif defined(TWIN_COPTER)
             motors.m3out -= SERVO_REVERSE rxState.pitch;
             motors.m4out += SERVO_REVERSE rxState.pitch;
             // Stick Only, Optional
             rxState.orgPitch = abs(rxState.orgPitch);
             motors.m5out += rxState.orgPitch; // Tain Servo-Optional, Down Only
             motors.m6out -= rxState.orgPitch; // Tain Servo-Optional, Down Only (Reverse)
-#elif defined(TRI_COPTER)
-            motors.m3out -= rxState.pitch;
-            rxState.pitch = (rxState.pitch >> 1); // cosine of 60
-            motors.m1out += rxState.pitch;
-            motors.m2out += rxState.pitch;
-#elif defined(QUAD_COPTER)
-            motors.m1out += rxState.pitch;
-            motors.m4out -= rxState.pitch;
-#elif defined(QUAD_X_COPTER)
-            rxState.pitch = (rxState.pitch >> 1); // cosine of 60
-            motors.m1out += rxState.pitch;
-            motors.m2out += rxState.pitch;
-            motors.m3out -= rxState.pitch;
-            motors.m4out -= rxState.pitch;
-#elif defined(Y4_COPTER)
-            motors.m1out += rxState.pitch;
-            motors.m2out += rxState.pitch;
-            motors.m3out -= rxState.pitch;
-            motors.m4out -= rxState.pitch;
-#elif defined(HEX_COPTER)
-            motors.m1out += rxState.pitch;
-            motors.m4out -= rxState.pitch;
-            rxState.pitch = (rxState.pitch >> 2);
-            motors.m2out += rxState.pitch;
-            motors.m3out -= rxState.pitch;
-            motors.m5out -= rxState.pitch;
-            motors.m6out += rxState.pitch;
-#elif defined(Y6_COPTER)
-            motors.m5out -= rxState.pitch;
-            motors.m6out -= rxState.pitch;
-            rxState.pitch = (rxState.pitch >> 1); // cosine of 60
-            motors.m1out += rxState.pitch;
-            motors.m2out += rxState.pitch;
-            motors.m3out += rxState.pitch;
-            motors.m4out += rxState.pitch;
-#endif
 
-
-#ifdef SINGLE_COPTER
-            motors.m2out += rxState.yaw;
-            motors.m3out += rxState.yaw;
-            motors.m4out += rxState.yaw;
-            motors.m5out += rxState.yaw;
-#elif defined(DUAL_COPTER)
-            motors.m1out -= rxState.yaw;
-            motors.m2out += rxState.yaw;
-#elif defined(TWIN_COPTER)
             motors.m3out += SERVO_REVERSE(rxState.yaw >> 1);
             motors.m4out += SERVO_REVERSE(rxState.yaw >> 1);
 #elif defined(TRI_COPTER)
+            motors.m1out = rxState.collective;
+            motors.m2out = rxState.collective;
+            motors.m3out = rxState.collective;
+            motors.m4out = 500;
+
+            rxState.roll = (rxState.roll * 7) >> 3; // (.875 versus .86602540)
+            motors.m1out += rxState.roll;
+            motors.m2out -= rxState.roll;
+
+            motors.m3out -= rxState.pitch;
+            rxState.pitch = (rxState.pitch >> 1); // cosine of 60
+            motors.m1out += rxState.pitch;
+            motors.m2out += rxState.pitch;
+
             motors.m4out += SERVO_REVERSE rxState.yaw;
 #elif defined(QUAD_COPTER)
+            motors.m1out = rxState.collective;
+            motors.m2out = rxState.collective;
+            motors.m3out = rxState.collective;
+            motors.m4out = rxState.collective;
+
+            motors.m2out += rxState.roll;
+            motors.m3out -= rxState.roll;
+
+            motors.m1out += rxState.pitch;
+            motors.m4out -= rxState.pitch;
+
             motors.m1out -= rxState.yaw;
             motors.m2out += rxState.yaw;
             motors.m3out += rxState.yaw;
             motors.m4out -= rxState.yaw;
 #elif defined(QUAD_X_COPTER)
+            motors.m1out = rxState.collective;
+            motors.m2out = rxState.collective;
+            motors.m3out = rxState.collective;
+            motors.m4out = rxState.collective;
+
+            rxState.roll = rxState.roll >> 1;
+            motors.m1out += rxState.roll;
+            motors.m2out -= rxState.roll;
+            motors.m3out -= rxState.roll;
+            motors.m4out += rxState.roll;
+
+            rxState.pitch = (rxState.pitch >> 1); // cosine of 60
+            motors.m1out += rxState.pitch;
+            motors.m2out += rxState.pitch;
+            motors.m3out -= rxState.pitch;
+            motors.m4out -= rxState.pitch;
+
             motors.m1out -= rxState.yaw;
             motors.m2out += rxState.yaw;
             motors.m3out -= rxState.yaw;
             motors.m4out += rxState.yaw;
 #elif defined(Y4_COPTER)
+            motors.m1out = rxState.collective;
+            motors.m2out = rxState.collective;
+            motors.m3out = rxState.collective * 3 / 4; // 25% Down
+            motors.m4out = rxState.collective * 3 / 4; // 25% Down
+
+            rxState.roll = (rxState.roll * 7) >> 3;
+            motors.m1out += rxState.roll;
+            motors.m2out -= rxState.roll;
+
+            motors.m1out += rxState.pitch;
+            motors.m2out += rxState.pitch;
+            motors.m3out -= rxState.pitch;
+            motors.m4out -= rxState.pitch;
+
             if((motors.m3out - rxState.yaw) < 100)
             rxState.yaw = motors.m3out - 100; // Yaw Range Limit
             if((motors.m3out - rxState.yaw) > 1000)
@@ -400,6 +361,27 @@ static inline void main_loop() {
             motors.m3out -= rxState.yaw;
             motors.m4out += rxState.yaw;
 #elif defined(HEX_COPTER)
+            motors.m1out = rxState.collective;
+            motors.m2out = rxState.collective;
+            motors.m3out = rxState.collective;
+            motors.m4out = rxState.collective;
+            motors.m5out = rxState.collective;
+            motors.m6out = rxState.collective;
+
+            rxState.roll = (rxState.roll * 7) >> 3;
+            motors.m2out -= rxState.roll;
+            motors.m3out -= rxState.roll;
+            motors.m5out += rxState.roll;
+            motors.m6out += rxState.roll;
+
+            motors.m1out += rxState.pitch;
+            motors.m4out -= rxState.pitch;
+            rxState.pitch = (rxState.pitch >> 2);
+            motors.m2out += rxState.pitch;
+            motors.m3out -= rxState.pitch;
+            motors.m5out -= rxState.pitch;
+            motors.m6out += rxState.pitch;
+
             motors.m1out -= rxState.yaw;
             motors.m2out += rxState.yaw;
             motors.m3out -= rxState.yaw;
@@ -407,6 +389,27 @@ static inline void main_loop() {
             motors.m5out -= rxState.yaw;
             motors.m6out += rxState.yaw;
 #elif defined(Y6_COPTER)
+            motors.m1out = rxState.collective;
+            motors.m2out = rxState.collective;
+            motors.m3out = rxState.collective;
+            motors.m4out = rxState.collective;
+            motors.m5out = rxState.collective;
+            motors.m6out = rxState.collective;
+
+            rxState.roll = (rxState.roll * 7) >> 3;
+            motors.m1out += rxState.roll;
+            motors.m2out += rxState.roll;
+            motors.m3out -= rxState.roll;
+            motors.m4out -= rxState.roll;
+
+            motors.m5out -= rxState.pitch;
+            motors.m6out -= rxState.pitch;
+            rxState.pitch = (rxState.pitch >> 1); // cosine of 60
+            motors.m1out += rxState.pitch;
+            motors.m2out += rxState.pitch;
+            motors.m3out += rxState.pitch;
+            motors.m4out += rxState.pitch;
+
             motors.m1out -= rxState.yaw;
             motors.m4out -= rxState.yaw;
             motors.m5out -= rxState.yaw;
@@ -414,6 +417,7 @@ static inline void main_loop() {
             motors.m3out += rxState.yaw;
             motors.m6out += rxState.yaw;
 #endif
+
 
 #if defined(TRI_COPTER)
             /*
