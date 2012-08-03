@@ -144,7 +144,7 @@ static inline void main_loop() {
 
         receiverGetChannels(&rxState);
 
-        if (rxState.collective <= 0 || !Armed) {
+        if (rxState.collective <= 0) {
             // Check for stick arming (Timer2 at 8MHz/1024 = 7812.5KHz)
             Change_Arming += (uint8_t) (TCNT2 - Arming_TCNT2);
             Arming_TCNT2 = TCNT2;
@@ -174,6 +174,14 @@ static inline void main_loop() {
             /* turn off motors */
 #if defined(DUAL_COPTER) || defined(TWIN_COPTER) || defined(TRI_COPTER)
             setMotorZero(!Armed);
+#else
+            setMotorZero();
+#endif
+        }
+        else if(!Armed){
+            /* turn off motors */
+#if defined(DUAL_COPTER) || defined(TWIN_COPTER) || defined(TRI_COPTER)
+            setMotorZero(true);
 #else
             setMotorZero();
 #endif
