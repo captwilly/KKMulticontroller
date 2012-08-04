@@ -4,10 +4,8 @@
 #include "common.h"
 
 /*** BEGIN TYPES ***/
-// eeProm data structure
+// Settings structure
 struct SETTINGS_S {
-    uint8_t setup; // Byte to identify if already setup
-
     uint8_t RollGyroDirection;
     uint8_t PitchGyroDirection;
     uint8_t YawGyroDirection;
@@ -15,6 +13,12 @@ struct SETTINGS_S {
     int16_t RxRollZero;
     int16_t RxPitchZero;
     int16_t RxYawZero;
+};
+
+// Structure actually saved to EEPROM (SETTINGS_S + CRC)
+struct SETTINGS_STORED_S {
+    uint32_t crc;
+    struct SETTINGS_S settings;
 };
 /*** END TYPES ***/
 
