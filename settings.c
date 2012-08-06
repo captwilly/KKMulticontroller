@@ -25,8 +25,9 @@
                 .RxRollZero =           0,                                  \
                 .RxPitchZero =          0,                                  \
                 .RxYawZero =            0,                                  \
+                                                                            \
+                .Comment = "Default settings, version 1"                    \
             },                                                              \
-            .comment = "Default settings, version 1"                        \
 
 
 static struct SETTINGS_STORED_S default_settings

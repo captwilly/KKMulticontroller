@@ -15,13 +15,14 @@ struct SETTINGS_S {
     int16_t RxRollZero;
     int16_t RxPitchZero;
     int16_t RxYawZero;
+
+    uint8_t Comment[100];
 };
 
 // Structure actually saved to EEPROM (SETTINGS_S + CRC)
 struct SETTINGS_STORED_S {
     uint32_t crc;
     struct SETTINGS_S settings;
-    uint8_t comment[100];
 };
 /*** END TYPES ***/
 
