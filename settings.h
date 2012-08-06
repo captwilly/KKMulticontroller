@@ -6,6 +6,8 @@
 /*** BEGIN TYPES ***/
 // Settings structure
 struct SETTINGS_S {
+    uint8_t Version;
+
     uint8_t RollGyroDirection;
     uint8_t PitchGyroDirection;
     uint8_t YawGyroDirection;
@@ -19,6 +21,7 @@ struct SETTINGS_S {
 struct SETTINGS_STORED_S {
     uint32_t crc;
     struct SETTINGS_S settings;
+    uint8_t comment[100];
 };
 /*** END TYPES ***/
 

@@ -10,11 +10,14 @@
 /* This magic number is written as CRC when generating EEPROM contents
  *  on first boot system will rewrite that with proper CRC value */
 #define EEPROM_SETTINGS_MAGIC	    0x0152B002UL
+#define EEPROM_SETTINGS_VERSION     1
 
 // Default settings
 #define DEFAULT_SETTINGS_INITIALIZER                                        \
             .crc =                  EEPROM_SETTINGS_MAGIC,                  \
             .settings = {                                                   \
+                .Version =              EEPROM_SETTINGS_VERSION,            \
+                                                                            \
                 .RollGyroDirection =    GYRO_REVERSED,                      \
                 .PitchGyroDirection =   GYRO_REVERSED,                      \
                 .YawGyroDirection =     GYRO_NORMAL,                        \
@@ -22,7 +25,8 @@
                 .RxRollZero =           0,                                  \
                 .RxPitchZero =          0,                                  \
                 .RxYawZero =            0,                                  \
-            }                                                               \
+            },                                                              \
+            .comment = "Default settings, version 1"                        \
 
 
 static struct SETTINGS_STORED_S default_settings
@@ -95,6 +99,16 @@ void settingsRead(struct SETTINGS_S *settings) {
             settingsSetDefaults();
             eeprom_read_block(settings, &default_settings.settings,
                     sizeof(struct SETTINGS_S));
+        }
+
+        // Check for proper settings version
+        if (settings->Version != EEPROM_SETTINGS_VERSION) {
+            while (true) {
+                LED = 1;
+                _delay_ms(1000);
+                LED = 0;
+                _delay_ms(1000);
+            }
         }
     }
 }
