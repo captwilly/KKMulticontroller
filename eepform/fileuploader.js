@@ -346,7 +346,7 @@ qq.FileUploaderBasic.prototype = {
         qq.attach(window, 'beforeunload', function(e){
             if (!self._filesInProgress){return;}
             
-            var e = e || window.event;
+            e = e || window.event;
             // for ie, ff
             e.returnValue = self._options.messages.onLeave;
             // for webkit
@@ -398,7 +398,7 @@ qq.FileUploaderBasic.prototype = {
         }
     },      
     _validateFile: function(file){
-        var name, size;
+        var name, size = 0;
         
         if (file.value){
             // it is a file input            
@@ -1136,7 +1136,7 @@ qq.UploadHandlerXhr.isSupported = function(){
 };
 
 // @inherits qq.UploadHandlerAbstract
-qq.extend(qq.UploadHandlerXhr.prototype, qq.UploadHandlerAbstract.prototype)
+qq.extend(qq.UploadHandlerXhr.prototype, qq.UploadHandlerAbstract.prototype);
 
 qq.extend(qq.UploadHandlerXhr.prototype, {
     /**
@@ -1163,7 +1163,7 @@ qq.extend(qq.UploadHandlerXhr.prototype, {
      * Returns uploaded bytes for file identified by id 
      */    
     getLoaded: function(id){
-        return this._loaded[id] || 0; 
+        return this._loaded[id] == 0 ? false : true; 
     },
     /**
      * Sends the file identified by id and additional query params to the server
@@ -1171,8 +1171,7 @@ qq.extend(qq.UploadHandlerXhr.prototype, {
      */    
     _upload: function(id, params){
         var file = this._files[id],
-            name = this.getName(id),
-            size = this.getSize(id);
+            name = this.getName(id);
                 
         this._loaded[id] = 0;
                                 
