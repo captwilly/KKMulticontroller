@@ -64,7 +64,7 @@ void receiverSetup() {
     RX_YAW =        0;
 
     /*
-     * timer1 (16bit) - run at 8MHz, used to measure Rx pulses
+     * timer1 (16bit) - run at 8MHz (prescaler 1), used to measure Rx pulses
      * and to control ESC/servo pulse
      */TCCR1B = _BV(CS10);
 
@@ -122,10 +122,11 @@ void receiverStickCenterManual(void) {
     struct RX_STATE_S rxState;
     uint8_t i;
     while (true) {
-        receiverGetChannels(&rxState);
+        receiverGetChannelsClean(&rxState);
         i = abs(rxState.roll) + abs(rxState.pitch) + abs(rxState.yaw);
+        i = i >= 100 ? 100 : i;
         LED = 0;
-        _delay_ms(10);
+        _delay_ms(100 - i);
         LED = 1;
         _delay_ms(i);
     }
