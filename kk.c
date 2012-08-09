@@ -143,6 +143,8 @@ static inline void main_loop() {
         LED = Armed;
 
         receiverGetChannels(&rxState);
+        // TODO: rework this (it was a compensation for changes in Rx driver)
+        rxState.collective += 400;
 
         if (rxState.collective <= 0) {
             // Check for stick arming (Timer2 at 8MHz/1024 = 7812.5KHz)

@@ -81,18 +81,9 @@ void receiverSetup() {
 }
 
 /*
- * This adding 7 business is to emulate exactly a signed
- * divide at the zero point (-7 through 7 will become 0).
- */
-int16_t fastdiv8(int16_t x) {
-    if (x < 0)
-        x += 7;
-    return x >> 3;
-}
-
-/*
  * Copy, scale, and offset the Rx inputs from the interrupt-modified
  * variables.
+ * [1000 to 2000] microseconds pulse corresponds [-500 to 500] result.
  */
 static void receiverGetChannelsClean(struct RX_STATE_S *state) {
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
@@ -102,10 +93,12 @@ static void receiverGetChannelsClean(struct RX_STATE_S *state) {
         state->yaw = RxChannel4;
     }
 
-    state->roll = fastdiv8(state->roll - 1520 * 8);
-    state->pitch = fastdiv8(state->pitch - 1520 * 8);
-    state->collective = fastdiv8(state->collective - 1120 * 8);
-    state->yaw = fastdiv8(state->yaw - 1520 * 8);
+    /* Divide by 8 (8MHz timer), offset by 1500 (1000us constant pulse, 500
+     *  offset to zero) */
+    state->roll = (state->roll >> 3) - 1500;
+    state->pitch = (state->pitch >> 3) - 1500;
+    state->yaw = (state->yaw >> 3) - 1500;
+    state->collective = (state->collective >> 3) - 1500;
 #ifdef TWIN_COPTER
     state->orgPitch = state->pitch;
 #endif
