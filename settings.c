@@ -25,6 +25,17 @@
                 .RxRollZero =           0,                                  \
                 .RxPitchZero =          0,                                  \
                 .RxYawZero =            0,                                  \
+                .RxCollectiveZero =     -500,                               \
+                                                                            \
+                .RxRollMin =            -500,                               \
+                .RxPitchMin =           -500,                               \
+                .RxYawMin =             -500,                               \
+                .RxCollectiveMin =      0,                                  \
+                                                                            \
+                .RxRollMax =            500,                                \
+                .RxPitchMax =           500,                                \
+                .RxYawMax =             500,                                \
+                .RxCollectiveMax =      1000,                               \
                                                                             \
                 .Comment = "Default settings, version 1"                    \
             },                                                              \

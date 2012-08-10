@@ -136,17 +136,21 @@ Run-time settings:
             d) power off
             e) rotate all three potentiometers away from minimal position 
                 (threshold is ~5%)
-    3. Automatic receiver stick centering.
+    3. Automatic receiver stick centering and utmost positions detection.
         Stick positions are read and saved in Non-Volatile memory (EEPROM) as 
-        zero offset.
+        zero and utmost position offset.
         Steps:
             a) power off
             b) rotate Pitch and Roll potentiometers to minimal position (CCW)
-            c) turn on transmitter, make sure all sticks (except Throttle) are
-                in middle position
+            c) turn on transmitter, make sure all sticks except Throttle are
+                in middle position and Throttle is on minimal
             c) power on and and wait LED start blinking
-            d) power off
-            e) rotate all three potentiometers away from minimal position 
+            d) move all sticks in all directions to theirs maximum positions
+            e) return sticks to previous positions (tolerance is 5%) for one 
+                second
+            f) LED will stop blinking
+            g) power off
+            h) rotate all three potentiometers away from minimal position 
                 (threshold is ~5%)
     4. Gyros reverse.
         Steps:

@@ -15,6 +15,7 @@ static struct SETTINGS_S settings;
 /*** END VARIABLES ***/
 
 /*** BEGIN RECEIVER INTERRUPTS ***/
+// NOTE: we can save average 4 tacts rewriting those in assembly
 ISR(PCINT2_vect) {
     static volatile uint16_t RxChannel1Start;
     if (RX_ROLL) { // rising
@@ -106,9 +107,33 @@ static void receiverGetChannelsClean(struct RX_STATE_S *state) {
 
 void receiverGetChannels(struct RX_STATE_S *state) {
     receiverGetChannelsClean(state);
+
+    // Apply zero offset
     state->roll -= settings.RxRollZero;
     state->pitch -= settings.RxPitchZero;
     state->yaw -= settings.RxYawZero;
+    state->collective -= settings.RxCollectiveZero;
+
+    /*
+     * Scale
+     */
+    int16_t max_swing, min_offset;
+
+    min_offset = state->roll - settings.RxRollMin;
+    max_swing = settings.RxRollMax - settings.RxRollMin;
+    state->roll = min_offset * 1000 / max_swing;
+
+    min_offset = state->pitch - settings.RxPitchMin;
+    max_swing = settings.RxPitchMax - settings.RxPitchMin;
+    state->pitch = min_offset * 1000 / max_swing;
+
+    min_offset = state->yaw - settings.RxYawMin;
+    max_swing = settings.RxYawMax - settings.RxYawMin;
+    state->yaw = min_offset * 1000 / max_swing;
+
+    min_offset = state->collective - settings.RxCollectiveMin;
+    max_swing = settings.RxCollectiveMax - settings.RxCollectiveMin;
+    state->collective = min_offset * 1000 / max_swing;
 }
 
 void receiverStickCenterManual(void) {
@@ -127,19 +152,75 @@ void receiverStickCenterManual(void) {
 
 void receiverStickCenterAutomatic(void) {
     struct RX_STATE_S rx;
-    receiverGetChannelsClean(&rx);
     settingsRead(&settings);
 
+    receiverGetChannelsClean(&rx);
+
+    // This will be final value for zero offset
     settings.RxRollZero = rx.roll;
     settings.RxPitchZero = rx.pitch;
     settings.RxYawZero = rx.yaw;
+    settings.RxCollectiveZero = rx.collective;
+
+    // Initial value for max and min
+    settings.RxRollMax = 0;
+    settings.RxPitchMax = 0;
+    settings.RxYawMax = 0;
+    settings.RxCollectiveMax = 0;
+    settings.RxRollMin = 0;
+    settings.RxPitchMin = 0;
+    settings.RxYawMin = 0;
+    settings.RxCollectiveMin = 0;
+
+
+    FOREVER {
+        receiverGetChannelsClean(&rx);
+
+        // Apply zero offset
+        rx.roll -= settings.RxRollZero;
+        rx.pitch -= settings.RxPitchZero;
+        rx.yaw -= settings.RxYawZero;
+        rx.collective -= settings.RxCollectiveZero;
+
+        // Find minimum and maximum
+        settings.RxRollMin = MIN(rx.roll, settings.RxRollMin);
+        settings.RxRollMax = MAX(rx.roll, settings.RxRollMax);
+        settings.RxPitchMin = MIN(rx.pitch, settings.RxPitchMin);
+        settings.RxPitchMax = MAX(rx.pitch, settings.RxPitchMax);
+        settings.RxYawMin = MIN(rx.yaw, settings.RxYawMin);
+        settings.RxYawMax = MAX(rx.yaw, settings.RxYawMax);
+        settings.RxCollectiveMin = MIN(rx.collective, settings.RxCollectiveMin);
+        settings.RxCollectiveMax = MAX(rx.collective, settings.RxCollectiveMax);
+
+        /* Check if all sticks have returned back to zero position
+         * (5% tolerance) for at least 0.6 seconds than we are done */
+        uint8_t finish_counter = 10;
+        for (; finish_counter > 0; finish_counter--) {
+            // Blink
+            LED = ~LED;
+            _delay_ms(60);
+
+            if (rx.roll > 50 || rx.roll < -50
+                    || rx.pitch > 50 || rx.pitch < -50
+                    || rx.yaw > 50 || rx.yaw < -50
+                    || rx.collective > 50 || rx.collective < -50) {
+                break;
+            }
+        }
+        // We will have zero only if loop have not been broke
+        if (0 == finish_counter) {
+            break;
+        }
+
+        // Blink
+        LED = ~LED;
+        /* Wait enough time for Rx data to update (60ms should be enough
+         *  concidering that receiver gives pulse every 50ms) */
+        _delay_ms(60);
+    }
 
     settingsWrite(&settings);
-
-    while (true) {
-        LED = 0;
-        _delay_ms(100);
-        LED = 1;
-        _delay_ms(100);
-    }
+    LED = 0;
+    // Wait for reboot
+    FOREVER {};
 }

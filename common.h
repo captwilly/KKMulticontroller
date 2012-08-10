@@ -20,5 +20,6 @@
         _a < _b ? _a : _b;                                                  \
     })
 
+#define FOREVER     while(true)
 
 #endif /* COMMON_H_ */
