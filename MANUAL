@@ -107,9 +107,9 @@ Receiver / Transmitter settings:
     Remote control schematic diagram (with channel names):
           
        Collective (Throttle)       Pitch (Aileron)
-                ↑                        ↑
-               ←☼→ Yaw (Rudder)         ←☼→ Roll (Elevator)
-                ↓                        ↓
+                в†‘                        в†‘
+               в†ђв�јв†’ Yaw (Rudder)         в†ђв�јв†’ Roll (Elevator)
+                в†“                        в†“
 
 
                    
@@ -146,9 +146,9 @@ Run-time settings:
                 in middle position and Throttle is on minimal
             c) power on and and wait LED start blinking
             d) move all sticks in all directions to theirs maximum positions
-            e) return sticks to previous positions (tolerance is 5%) for one 
-                second
-            f) LED will stop blinking
+            e) return sticks to previous positions (tolerance is 5%) for three 
+                seconds
+            f) LED will start blinking slower
             g) power off
             h) rotate all three potentiometers away from minimal position 
                 (threshold is ~5%)

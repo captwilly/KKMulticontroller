@@ -174,6 +174,7 @@ void receiverStickCenterAutomatic(void) {
     settings.RxCollectiveMin = 0;
 
 
+    uint8_t finish_counter = 0;
     FOREVER {
         receiverGetChannelsClean(&rx);
 
@@ -194,34 +195,28 @@ void receiverStickCenterAutomatic(void) {
         settings.RxCollectiveMax = MAX(rx.collective, settings.RxCollectiveMax);
 
         /* Check if all sticks have returned back to zero position
-         * (5% tolerance) for at least 0.6 seconds than we are done */
-        uint8_t finish_counter = 10;
-        for (; finish_counter > 0; finish_counter--) {
-            // Blink
-            LED = ~LED;
-            _delay_ms(60);
-
-            if (rx.roll > 50 || rx.roll < -50
-                    || rx.pitch > 50 || rx.pitch < -50
-                    || rx.yaw > 50 || rx.yaw < -50
-                    || rx.collective > 50 || rx.collective < -50) {
-                break;
-            }
+         * (5% tolerance) for at least 2.4 seconds than we are done */
+        if (false
+                || rx.roll > 50 || rx.roll < -50
+                || rx.pitch > 50 || rx.pitch < -50
+                || rx.yaw > 50 || rx.yaw < -50
+                || rx.collective > 50 || rx.collective < -50) {
+            finish_counter = 0;
+        } else {
+            finish_counter++;
         }
-        // We will have zero only if loop have not been broke
-        if (0 == finish_counter) {
+        if (finish_counter == 40) {
             break;
         }
 
         // Blink
         LED = ~LED;
         /* Wait enough time for Rx data to update (60ms should be enough
-         *  concidering that receiver gives pulse every 50ms) */
+         *  considering that receiver gives pulse every 50ms) */
         _delay_ms(60);
     }
 
     settingsWrite(&settings);
-    LED = 0;
     // Wait for reboot
-    FOREVER {};
+    FOREVER {LED = ~LED; _delay_ms(1000);};
 }
