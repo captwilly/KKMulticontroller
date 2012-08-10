@@ -117,9 +117,10 @@ void receiverStickCenterManual(void) {
     while (true) {
         receiverGetChannelsClean(&rxState);
         i = abs(rxState.roll) + abs(rxState.pitch) + abs(rxState.yaw);
-        i = i >= 100 ? 100 : i;
+        i = i / 4;
+        i = i >= 25 ? 25 : i;
         LED = 0;
-        _delay_ms(100 - i);
+        _delay_ms(25 - i);
         LED = 1;
         _delay_ms(i);
     }
