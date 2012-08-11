@@ -369,22 +369,26 @@ void motorsIdentify() {
 
         if (LED) {
             if (motor == 1) {
-                motors.m1out = 50;
+                motors.m1out = MOTOR_LOWEST_VALUE;
             }
             if (motor == 2) {
-                motors.m2out = 50;
+                motors.m2out = MOTOR_LOWEST_VALUE;
             }
             if (motor == 3) {
-                motors.m3out = 50;
+                motors.m3out = MOTOR_LOWEST_VALUE;
             }
             if (motor == 4) {
-                motors.m4out = 50;
+                motors.m4out = MOTOR_LOWEST_VALUE;
             }
 #if M5_USED
-            if(motor == 5) {motors.m5out = 50;}
+            if (motor == 5) {
+                motors.m5out = MOTOR_LOWEST_VALUE;
+            }
 #endif
 #if M6_USED
-            if(motor == 6) {motors.m6out = 50;}
+            if (motor == 6) {
+                motors.m6out = MOTOR_LOWEST_VALUE;
+            }
 #endif
         }
 

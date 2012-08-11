@@ -132,9 +132,11 @@ Run-time settings:
         Steps:
             a) power off
             b) rotate Pitch and Yaw potentiometers to minimal position (CCW)
-            .... this item lacks documentation ....
-            d) power off
-            e) rotate all three potentiometers away from minimal position 
+            c) power on
+            d) motors/servo will turn on sequentially (first to last) for a 
+                short time.
+            e) power off
+            f) rotate all three potentiometers away from minimal position 
                 (threshold is ~5%)
     3. Automatic receiver stick centering.
         Stick positions are read and saved in Non-Volatile memory (EEPROM) as 
