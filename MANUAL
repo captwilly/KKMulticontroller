@@ -107,9 +107,9 @@ Receiver / Transmitter settings:
     Remote control schematic diagram (with channel names):
           
        Collective (Throttle)       Pitch (Aileron)
-                в†‘                        в†‘
-               в†ђв�јв†’ Yaw (Rudder)         в†ђв�јв†’ Roll (Elevator)
-                в†“                        в†“
+                ↑                        ↑
+               ←☼→ Yaw (Rudder)         ←☼→ Roll (Elevator)
+                ↓                        ↓
 
 
                    
@@ -132,9 +132,11 @@ Run-time settings:
         Steps:
             a) power off
             b) rotate Pitch and Yaw potentiometers to minimal position (CCW)
-            .... this item lacks documentation ....
-            d) power off
-            e) rotate all three potentiometers away from minimal position 
+            c) power on
+            d) motors/servo will turn on sequentially (first to last) for a 
+                short time.
+            e) power off
+            f) rotate all three potentiometers away from minimal position 
                 (threshold is ~5%)
     3. Automatic receiver stick centering and utmost positions detection.
         Stick positions are read and saved in Non-Volatile memory (EEPROM) as 
