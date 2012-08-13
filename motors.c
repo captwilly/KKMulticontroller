@@ -4,6 +4,32 @@
 #include <util/delay.h>
 #include <util/atomic.h>
 
+// It's 80 CPU tacts - should be enough for IRQ handler to complete
+#define MIN_DIST    10
+
+#define ESC_PERIOD  F_CPU / ESC_RATE
+#if ESC_RATE >= 500
+#error "ESC rate is too high (protocol restriction)"
+#endif
+#if ESC_PERIOD >= (1 << 16)
+#error "ESC rate is too low (timer width and prescaler restriction)"
+#endif
+
+#if M5_USED && M6_USED
+#define MOTOR_COUNT 6
+#elif M5_USED || M6_USED
+#define MOTOR_COUNT 5
+#else
+#define MOTOR_COUNT 4
+#endif
+
+static struct {
+    uint16_t offset;
+    uint8_t number;
+} motors_list[MOTOR_COUNT - 1];
+static uint16_t motor_next;
+
+
 #if defined(SINGLE_COPTER) \
     || defined(DUAL_COPTER) \
     || defined(TWIN_COPTER) \
@@ -12,6 +38,8 @@ uint8_t servo_skip;
 uint16_t servo_skip_divider;
 #endif
 
+static volatile bool motorReady = true;
+
 void motorsSetup() {
     M1_DIR = OUTPUT;
     M2_DIR = OUTPUT;
@@ -19,6 +47,12 @@ void motorsSetup() {
     M4_DIR = OUTPUT;
     M5_DIR = OUTPUT;
     M6_DIR = OUTPUT;
+    M1 = 0;
+    M2 = 0;
+    M3 = 0;
+    M4 = 0;
+    M5 = 0;
+    M6 = 0;
 
     /*
      * timer0 (8bit) - run at 8MHz, used to control ESC pulses
@@ -42,6 +76,171 @@ void motorsSetup() {
 #endif
 }
 
+void motorOutputPPM(struct MT_STATE_S *state){
+    // Ensure all values are in their ranges
+    state->m1out = MIN(1000, state->m1out);
+    state->m1out = MAX(0, state->m1out);
+    state->m2out = MIN(1000, state->m2out);
+    state->m2out = MAX(0, state->m2out);
+    state->m3out = MIN(1000, state->m3out);
+    state->m3out = MAX(0, state->m3out);
+    state->m4out = MIN(1000, state->m4out);
+    state->m4out = MAX(0, state->m4out);
+#if M5_USED
+    state->m5out = MIN(1000, state->m5out);
+    state->m5out = MAX(0, state->m5out);
+#endif
+#if M6_USED
+    state->m6out = MIN(1000, state->m6out);
+    state->m6out = MAX(0, state->m6out);
+#endif
+
+    // Temporary array used for sorting
+    uint16_t sort_tmp[MOTOR_COUNT];
+    sort_tmp[0] = state->m1out;
+    sort_tmp[1] = state->m2out;
+    sort_tmp[2] = state->m3out;
+    sort_tmp[3] = state->m4out;
+#if M5_USED
+    sort_tmp[4] = state->m5out;
+#endif
+#if M6_USED
+    sort_tmp[5] = state->m6out;
+#endif
+
+    uint8_t sort_result[MOTOR_COUNT] = {0, 1, 2, 3,
+#if MOTOR_COUNT == 5
+            5
+#endif
+#if MOTOR_COUNT == 6
+            5, 6
+#endif
+    };
+
+    // Selection sort
+    for (uint8_t i = 0; i < MOTOR_COUNT; i++) {
+        uint8_t max = i;
+        for (uint8_t j = i + 1; j < MOTOR_COUNT; j++) {
+            if (sort_tmp[sort_result[j]] > sort_tmp[sort_result[max]]) {
+                max = j;
+            }
+        }
+        if (i != max) {
+            uint8_t tmp = sort_result[i];
+            sort_result[i] = sort_result[max];
+            sort_result[max] = tmp;
+        }
+    }
+
+
+    for (uint8_t i = 0; i < MOTOR_COUNT - 1; i++) {
+        motors_list[i].number = sort_result[i];
+        if (sort_result[i] - MIN_DIST >= sort_result[i + 1]) {
+            motors_list[i].offset = 1000 * 8 + sort_tmp[sort_result[i]] * 8;
+        } else {
+            motors_list[i].offset = 0;
+            sort_tmp[i + 1] = (sort_tmp[i] + sort_tmp[i + 1]) / 2;
+        }
+    }
+    // Last index in array
+    motor_next = MOTOR_COUNT - 2;
+
+
+    // Wait previous output to finish
+    while(!motorReady);
+    motorReady = false;
+
+    M1 = 1;
+    M2 = 1;
+    M3 = 1;
+    M4 = 1;
+    M5 = 1;
+    M6 = 1;
+
+    uint16_t curr_cnt;
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+        curr_cnt = TCNT1;
+    }
+
+    uint16_t pulse_delay = curr_cnt + 1000 * 8 + (state->m1out << 3);
+    uint16_t pause_delay = curr_cnt + ESC_PERIOD;
+
+    for(uint8_t i = 0; i < MOTOR_COUNT - 1; i++) {
+        if (motors_list[i].offset != 0) {
+            motors_list[i].offset += curr_cnt;
+        }
+    }
+
+    // Clear interrupt flags
+    TIFR1 = _BV(OCF1A) | _BV(OCF1B);
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+        OCR1A = pulse_delay;
+    }
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+        OCR1B = pause_delay;
+    }
+    TIMSK1 |= _BV(OCIE1A) | _BV(OCIE1B);
+}
+
+ISR(TIMER1_COMPA_vect) {
+    /* Loop through motor list (from highest index set in motorOutputPPM to
+     * zero) */
+    for (;; motor_next--) {
+        // Decide which line should go down now
+        switch (motors_list[motor_next].number) {
+        case 0:
+            M1 = 0;
+            break;
+        case 1:
+            M2 = 0;
+            break;
+        case 2:
+            M3 = 0;
+#if !M5_USED
+            M5 = 0;
+#endif
+            break;
+        case 3:
+            M4 = 0;
+#if !M6_USED
+            M6 = 0;
+#endif
+            break;
+#if M5_USED
+        case 4:
+            M5 = 0;
+            break;
+#endif
+#if M5_USED
+        case 5:
+            M6 = 0;
+            break;
+#endif
+        }
+        if (motor_next == 0) {
+            // We are on finish, disable further interrupts
+            TIMSK1 &= ~_BV(OCIE1A);
+            break;
+        }
+        if (motors_list[motor_next - 1].offset != 0) {
+            // Normal case - next line will be release in some time later
+            OCR1A = motors_list[motor_next].offset;
+            // Need to decrement manually as we are breaking the loop
+            motor_next--;
+            break;
+        }
+        // Otherwise go and release other line
+    }
+}
+
+ISR(TIMER1_COMPB_vect) {
+    /* This happens when pause required to care ESC_RATE is finished.
+     *  Indicate readiness for the next cycle and disable further interrupts */
+    TIMSK1 &= ~_BV(OCIE1B);
+    motorReady = true;
+}
+
+#if 0
 void motorOutputPPM(struct MT_STATE_S *state) {
     static int16_t MotorStartTCNT1;
     int16_t t;
@@ -323,6 +522,7 @@ void motorOutputPPM(struct MT_STATE_S *state) {
      * We leave with the output pins ON.
      */
 }
+#endif
 
 void motorsIdentify() {
     LED = 0;
