@@ -15,6 +15,17 @@ struct SETTINGS_S {
     int16_t RxRollZero;
     int16_t RxPitchZero;
     int16_t RxYawZero;
+    int16_t RxCollectiveZero;
+
+    int16_t RxRollMin;
+    int16_t RxPitchMin;
+    int16_t RxYawMin;
+    int16_t RxCollectiveMin;
+
+    int16_t RxRollMax;
+    int16_t RxPitchMax;
+    int16_t RxYawMax;
+    int16_t RxCollectiveMax;
 
     uint8_t Comment[100];
 };

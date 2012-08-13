@@ -15,6 +15,7 @@ static struct SETTINGS_S settings;
 /*** END VARIABLES ***/
 
 /*** BEGIN RECEIVER INTERRUPTS ***/
+// NOTE: we can save average 4 tacts rewriting those in assembly
 ISR(PCINT2_vect) {
     static volatile uint16_t RxChannel1Start;
     if (RX_ROLL) { // rising
@@ -80,6 +81,12 @@ void receiverSetup() {
     settingsRead(&settings);
 }
 
+static int16_t receiverScale(int16_t value, int16_t min, int16_t max){
+    /* Calculate value per mil (in 1/1000th),
+     * cast to S32 so product of multiplying by 1000 will fit into variable */
+    return  ((int32_t)(value - min) * 1000) / (max - min);
+}
+
 /*
  * Copy, scale, and offset the Rx inputs from the interrupt-modified
  * variables.
@@ -106,9 +113,24 @@ static void receiverGetChannelsClean(struct RX_STATE_S *state) {
 
 void receiverGetChannels(struct RX_STATE_S *state) {
     receiverGetChannelsClean(state);
+
+    /*
+     * Scale
+     */
+    state->roll = receiverScale(state->roll,
+            settings.RxRollMin, settings.RxRollMax);
+    state->pitch = receiverScale(state->pitch,
+            settings.RxPitchMin, settings.RxPitchMax);
+    state->yaw = receiverScale(state->yaw,
+            settings.RxYawMin, settings.RxYawMax);
+    state->collective = receiverScale(state->collective,
+            settings.RxCollectiveMin, settings.RxCollectiveMax);
+
+    // Apply zero offset
     state->roll -= settings.RxRollZero;
     state->pitch -= settings.RxPitchZero;
     state->yaw -= settings.RxYawZero;
+    state->collective -= settings.RxCollectiveZero;
 }
 
 void receiverStickCenterManual(void) {
@@ -128,19 +150,78 @@ void receiverStickCenterManual(void) {
 
 void receiverStickCenterAutomatic(void) {
     struct RX_STATE_S rx;
-    receiverGetChannelsClean(&rx);
     settingsRead(&settings);
 
+    receiverGetChannelsClean(&rx);
+
+    // This will be final value for zero offset
     settings.RxRollZero = rx.roll;
     settings.RxPitchZero = rx.pitch;
     settings.RxYawZero = rx.yaw;
+    settings.RxCollectiveZero = rx.collective;
+
+    // Initial value for max and min
+    settings.RxRollMax = settings.RxRollZero;
+    settings.RxPitchMax = settings.RxPitchZero;
+    settings.RxYawMax = settings.RxYawZero;
+    settings.RxCollectiveMax = settings.RxCollectiveZero;
+    settings.RxRollMin = settings.RxRollZero;
+    settings.RxPitchMin = settings.RxPitchZero;
+    settings.RxYawMin = settings.RxYawZero;
+    settings.RxCollectiveMin = settings.RxCollectiveZero;
+
+
+    uint8_t finish_counter = 0;
+    FOREVER {
+        receiverGetChannelsClean(&rx);
+
+        // Find minimum and maximum
+        settings.RxRollMin = MIN(rx.roll, settings.RxRollMin);
+        settings.RxRollMax = MAX(rx.roll, settings.RxRollMax);
+        settings.RxPitchMin = MIN(rx.pitch, settings.RxPitchMin);
+        settings.RxPitchMax = MAX(rx.pitch, settings.RxPitchMax);
+        settings.RxYawMin = MIN(rx.yaw, settings.RxYawMin);
+        settings.RxYawMax = MAX(rx.yaw, settings.RxYawMax);
+        settings.RxCollectiveMin = MIN(rx.collective, settings.RxCollectiveMin);
+        settings.RxCollectiveMax = MAX(rx.collective, settings.RxCollectiveMax);
+
+        /* Check if all sticks have returned back to zero position
+         * (5% tolerance) for at least 2.4 seconds than we are done */
+        if (false
+                || rx.roll - settings.RxRollZero > 50
+                || rx.roll - settings.RxRollZero < -50
+                || rx.pitch - settings.RxPitchZero > 50
+                || rx.pitch - settings.RxPitchZero < -50
+                || rx.yaw - settings.RxYawZero > 50
+                || rx.yaw - settings.RxYawZero < -50
+                || rx.collective - settings.RxCollectiveZero > 50
+                || rx.collective - settings.RxCollectiveZero < -50) {
+            finish_counter = 0;
+        } else {
+            finish_counter++;
+        }
+        if (finish_counter == 40) {
+            break;
+        }
+
+        // Blink
+        LED = ~LED;
+        /* Wait enough time for Rx data to update (60ms should be enough
+         *  considering that receiver gives pulse every 50ms) */
+        _delay_ms(60);
+    }
+
+    // Scale zero offset
+    settings.RxRollZero = receiverScale(settings.RxRollZero,
+            settings.RxRollMin, settings.RxRollMax);
+    settings.RxPitchZero = receiverScale(settings.RxPitchZero,
+            settings.RxPitchMin, settings.RxPitchMax);
+    settings.RxYawZero = receiverScale(settings.RxYawZero,
+            settings.RxYawMin, settings.RxYawMax);
+    settings.RxCollectiveZero = receiverScale(settings.RxCollectiveZero,
+            settings.RxCollectiveMin, settings.RxCollectiveMax);
 
     settingsWrite(&settings);
-
-    while (true) {
-        LED = 0;
-        _delay_ms(100);
-        LED = 1;
-        _delay_ms(100);
-    }
+    // Wait for reboot
+    FOREVER {LED = ~LED; _delay_ms(1000);};
 }

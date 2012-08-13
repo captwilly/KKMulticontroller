@@ -143,10 +143,8 @@ static inline void main_loop() {
         LED = Armed;
 
         receiverGetChannels(&rxState);
-        // TODO: rework this (it was a compensation for changes in Rx driver)
-        rxState.collective += 400;
 
-        if (rxState.collective <= 0) {
+        if (rxState.collective <= 50) {
             // Check for stick arming (Timer2 at 8MHz/1024 = 7812.5KHz)
             Change_Arming += (uint8_t) (TCNT2 - Arming_TCNT2);
             Arming_TCNT2 = TCNT2;
@@ -158,7 +156,7 @@ static inline void main_loop() {
                 }
             } else {
                 if (rxState.yaw > -STICK_THROW ||
-                        abs(rxState.pitch) > STICK_THROW){
+                        abs(rxState.pitch) > STICK_THROW) {
                     Change_Arming = 0; // re-set count
                 }
             }
@@ -193,8 +191,6 @@ static inline void main_loop() {
             gyrosReadGainPots(&pots);
 
             // Start mixing
-
-            rxState.collective = (rxState.collective * 10) >> 3; // 0-800 -> 0-1000
 
             imax = MAX(rxState.collective, 0);
             imax >>= 3; /* 1000 -> 200 */
