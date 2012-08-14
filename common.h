@@ -2,6 +2,7 @@
 #define COMMON_H_
 
 #include <avr/io.h>
+#include <avr/eeprom.h>
 #include "typedefs.h"
 #include "io_cfg.h"
 #include "config.h"
@@ -21,5 +22,9 @@
     })
 
 #define FOREVER     while(true)
+
+#define DEBUG(x)	{														\
+        eeprom_write_block(&x, (void*)512, sizeof(x));                      \
+    }
 
 #endif /* COMMON_H_ */

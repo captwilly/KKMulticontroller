@@ -26,7 +26,7 @@
 static struct {
     uint16_t offset;
     uint8_t number;
-} motors_list[MOTOR_COUNT - 1];
+} motors_list[MOTOR_COUNT];
 static uint16_t motor_next;
 
 
@@ -132,8 +132,7 @@ void motorOutputPPM(struct MT_STATE_S *state){
         }
     }
 
-
-    for (uint8_t i = 0; i < MOTOR_COUNT - 1; i++) {
+    for (uint8_t i = 0; i < MOTOR_COUNT; i++) {
         motors_list[i].number = sort_result[i];
         if (sort_result[i] - MIN_DIST >= sort_result[i + 1]) {
             motors_list[i].offset = 1000 * 8 + sort_tmp[sort_result[i]] * 8;
@@ -142,8 +141,25 @@ void motorOutputPPM(struct MT_STATE_S *state){
             sort_tmp[i + 1] = (sort_tmp[i] + sort_tmp[i + 1]) / 2;
         }
     }
+
+    for (int8_t i = MOTOR_COUNT - 1; i >= 0; i--) {
+        motors_list[i].number = sort_result[i];
+        if (i != (MOTOR_COUNT - 1) &&
+                (sort_tmp[sort_result[i]] - sort_tmp[sort_result[i + 1]]) < MIN_DIST) {
+            // Difference is too low, put average to previous value, zero to current
+//            motors_list[i + 1].offset =
+//                    1000 * 8 + (sort_tmp[sort_result[i]] + sort_tmp[sort_result[i + 1]]) * 4;
+            motors_list[i].offset = 0;
+        } else {
+            // Normal case, difference is high
+            motors_list[i].offset = 1000 * 8 + sort_tmp[sort_result[i]] * 8;
+        }
+    }
+
+//    DEBUG(motors_list);
+//    FOREVER {}
     // Last index in array
-    motor_next = MOTOR_COUNT - 2;
+    motor_next = MOTOR_COUNT - 1;
 
 
     // Wait previous output to finish
@@ -162,10 +178,10 @@ void motorOutputPPM(struct MT_STATE_S *state){
         curr_cnt = TCNT1;
     }
 
-    uint16_t pulse_delay = curr_cnt + 1000 * 8 + (state->m1out << 3);
+    uint16_t pulse_delay = curr_cnt + (motors_list[MOTOR_COUNT - 1].offset);
     uint16_t pause_delay = curr_cnt + ESC_PERIOD;
 
-    for(uint8_t i = 0; i < MOTOR_COUNT - 1; i++) {
+    for(uint8_t i = 0; i < MOTOR_COUNT; i++) {
         if (motors_list[i].offset != 0) {
             motors_list[i].offset += curr_cnt;
         }
@@ -218,13 +234,13 @@ ISR(TIMER1_COMPA_vect) {
 #endif
         }
         if (motor_next == 0) {
-            // We are on finish, disable further interrupts
+            // We are finished here, disable further interrupts
             TIMSK1 &= ~_BV(OCIE1A);
             break;
         }
         if (motors_list[motor_next - 1].offset != 0) {
             // Normal case - next line will be release in some time later
-            OCR1A = motors_list[motor_next].offset;
+            OCR1A = motors_list[motor_next - 1].offset;
             // Need to decrement manually as we are breaking the loop
             motor_next--;
             break;
