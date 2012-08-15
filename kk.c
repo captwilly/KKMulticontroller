@@ -140,18 +140,6 @@ static inline void main_loop() {
 
     while (true) {
 
-        memset(&motors, 0, sizeof(struct MT_STATE_S));
-        motorOutputPPM(&motors);
-
-    	FOREVER {
-//    		memset(&motors, 0, sizeof(struct MT_STATE_S));
-    	    motors.m1out = 200;
-    	    motors.m2out = 200;
-    	    motors.m3out = 200;
-    	    motors.m4out = 200;
-    		motorOutputPPM(&motors);
-    	}
-
         LED = Armed;
 
         receiverGetChannels(&rxState);

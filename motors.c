@@ -5,7 +5,7 @@
 #include <util/atomic.h>
 
 // It's 80 CPU tacts - should be enough for IRQ handler to complete
-#define MIN_DIST    10
+#define MIN_DIST    21
 
 #define ESC_PERIOD  F_CPU / ESC_RATE
 #if ESC_RATE >= 500
@@ -132,15 +132,13 @@ void motorOutputPPM(struct MT_STATE_S *state){
         }
     }
 
-    for (uint8_t i = 0; i < MOTOR_COUNT; i++) {
-        motors_list[i].number = sort_result[i];
-        if (sort_result[i] - MIN_DIST >= sort_result[i + 1]) {
-            motors_list[i].offset = 1000 * 8 + sort_tmp[sort_result[i]] * 8;
-        } else {
-            motors_list[i].offset = 0;
-            sort_tmp[i + 1] = (sort_tmp[i] + sort_tmp[i + 1]) / 2;
-        }
-    }
+
+    // Wait previous output to finish
+    while(!motorReady);
+    motorReady = false;
+
+    // Last index in array
+    motor_next = MOTOR_COUNT - 1;
 
     for (int8_t i = MOTOR_COUNT - 1; i >= 0; i--) {
         motors_list[i].number = sort_result[i];
@@ -156,15 +154,6 @@ void motorOutputPPM(struct MT_STATE_S *state){
         }
     }
 
-//    DEBUG(motors_list);
-//    FOREVER {}
-    // Last index in array
-    motor_next = MOTOR_COUNT - 1;
-
-
-    // Wait previous output to finish
-    while(!motorReady);
-    motorReady = false;
 
     M1 = 1;
     M2 = 1;
