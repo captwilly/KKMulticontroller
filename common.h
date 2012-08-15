@@ -25,6 +25,7 @@
 
 #define DEBUG(x)	{														\
         eeprom_write_block(&x, (void*)512, sizeof(x));                      \
+        FOREVER{}                                                           \
     }
 
 #endif /* COMMON_H_ */

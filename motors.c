@@ -4,7 +4,8 @@
 #include <util/delay.h>
 #include <util/atomic.h>
 
-// It's 80 CPU tacts - should be enough for IRQ handler to complete
+// 168 CPU tacts for ISR to finish - about 2% error
+// TODO: decrease this as much as possible
 #define MIN_DIST    21
 
 #define ESC_PERIOD  F_CPU / ESC_RATE
@@ -29,7 +30,7 @@ static struct {
 } motors_list[MOTOR_COUNT];
 static uint16_t motor_next;
 
-
+// TODO: implement Servo skip
 #if defined(SINGLE_COPTER) \
     || defined(DUAL_COPTER) \
     || defined(TWIN_COPTER) \
@@ -77,6 +78,7 @@ void motorsSetup() {
 }
 
 void motorOutputPPM(struct MT_STATE_S *state){
+
     // Ensure all values are in their ranges
     state->m1out = MIN(1000, state->m1out);
     state->m1out = MAX(0, state->m1out);
@@ -95,19 +97,22 @@ void motorOutputPPM(struct MT_STATE_S *state){
     state->m6out = MAX(0, state->m6out);
 #endif
 
+
     // Temporary array used for sorting
-    uint16_t sort_tmp[MOTOR_COUNT];
-    sort_tmp[0] = state->m1out;
-    sort_tmp[1] = state->m2out;
-    sort_tmp[2] = state->m3out;
-    sort_tmp[3] = state->m4out;
+    uint16_t motors[MOTOR_COUNT];
+    motors[0] = state->m1out;
+    motors[1] = state->m2out;
+    motors[2] = state->m3out;
+    motors[3] = state->m4out;
 #if M5_USED
-    sort_tmp[4] = state->m5out;
+    motors[4] = state->m5out;
 #endif
 #if M6_USED
-    sort_tmp[5] = state->m6out;
+    motors[5] = state->m6out;
 #endif
 
+
+    // Handles indexes of motors array for sorting purposes
     uint8_t sort_result[MOTOR_COUNT] = {0, 1, 2, 3,
 #if MOTOR_COUNT == 5
             5
@@ -117,11 +122,13 @@ void motorOutputPPM(struct MT_STATE_S *state){
 #endif
     };
 
-    // Selection sort
+
+    /* Selection sort (ascending).
+     *  We need to provide sorted list for the ISR */
     for (uint8_t i = 0; i < MOTOR_COUNT; i++) {
         uint8_t max = i;
         for (uint8_t j = i + 1; j < MOTOR_COUNT; j++) {
-            if (sort_tmp[sort_result[j]] > sort_tmp[sort_result[max]]) {
+            if (motors[sort_result[j]] > motors[sort_result[max]]) {
                 max = j;
             }
         }
@@ -133,57 +140,88 @@ void motorOutputPPM(struct MT_STATE_S *state){
     }
 
 
-    // Wait previous output to finish
+    /* Wait previous output to finish. Next calculations update variables used
+     *  in ISR so we can't perform those before ready-wait loop*/
     while(!motorReady);
     motorReady = false;
 
-    // Last index in array
+
+    /* We will use all motor_list contents in ISR indexing it reverse direction.
+     *  So put the last possible index here */
     motor_next = MOTOR_COUNT - 1;
 
+    /* Loop trough sorted motors array (motors[sort_result[i]]) in reverse
+     *  direction copying values and doing some magic */
     for (int8_t i = MOTOR_COUNT - 1; i >= 0; i--) {
         motors_list[i].number = sort_result[i];
         if (i != (MOTOR_COUNT - 1) &&
-                (sort_tmp[sort_result[i]] - sort_tmp[sort_result[i + 1]]) < MIN_DIST) {
-            // Difference is too low, put average to previous value, zero to current
-//            motors_list[i + 1].offset =
-//                    1000 * 8 + (sort_tmp[sort_result[i]] + sort_tmp[sort_result[i + 1]]) * 4;
+                (motors[sort_result[i]] - motors[sort_result[i + 1]]) < MIN_DIST) {
+            /* Due to ISR latency we can't output values which are closer than
+             *   MIN_DIST to each other. In this case we are putting zero to
+             *   offset indicating that current motor should have same output
+             *   as previous one */
+            // TODO: implement values averaging to mitigate error a bit
             motors_list[i].offset = 0;
         } else {
-            // Normal case, difference is high
-            motors_list[i].offset = 1000 * 8 + sort_tmp[sort_result[i]] * 8;
+            /* Normal case - difference is high enough to setup Compare event
+             *  and not hit it before ISR ends. Add 1000 offset as required by
+             *  protocol and multiply all by 8 as we have 8MHz clock */
+            motors_list[i].offset = 1000 * 8 + motors[sort_result[i]] * 8;
         }
     }
 
 
-    M1 = 1;
-    M2 = 1;
-    M3 = 1;
-    M4 = 1;
-    M5 = 1;
-    M6 = 1;
+    // Start outputting signal
+    M1 = 1; M2 = 1; M3 = 1; M4 = 1; M5 = 1; M6 = 1;
 
+    /* Remember current counter value to base compare further compare events on
+     *  it */
     uint16_t curr_cnt;
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+        /* We should disable interrupts here so no one will be able to corrupt
+         *  TEMP register used for atomic 16-bit access */
         curr_cnt = TCNT1;
     }
 
+    /* Calculate initial value for our main compare register.
+     *  This should be offset for motor with lowest value and that in turn
+     *  resides in the last member of the motor_list because we have sorted it.
+     */
     uint16_t pulse_delay = curr_cnt + (motors_list[MOTOR_COUNT - 1].offset);
+
+    /* Second available compare register will be used to add some pause in
+     *  pulses generation to ensure that we have pulses rate not higher than
+     *  ESC_RATE */
     uint16_t pause_delay = curr_cnt + ESC_PERIOD;
 
-    for(uint8_t i = 0; i < MOTOR_COUNT; i++) {
+    /* Loop through motors list adding required offset.
+     *  Skip last member as we have already computed and used that few lines
+     *  before. Also skip members with magic applied - they will use previous
+     *  motors offset */
+    for(uint8_t i = 0; i < MOTOR_COUNT - 1; i++) {
         if (motors_list[i].offset != 0) {
             motors_list[i].offset += curr_cnt;
         }
     }
 
-    // Clear interrupt flags
+    // Clear interrupt flags (just for case as a good practice)
     TIFR1 = _BV(OCF1A) | _BV(OCF1B);
+
+    /* We are splitting atomic access section in two pieces to give a chance
+     *  for some other modules interrupt to strike between that two parts.
+     *  It's not critical for this code but could be could decrease overall
+     *  interrupt latency */
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+        /* We should disable interrupts here so no one will be able to corrupt
+         *  TEMP register used for atomic 16-bit access */
         OCR1A = pulse_delay;
     }
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+        /* We should disable interrupts here so no one will be able to corrupt
+         *  TEMP register used for atomic 16-bit access */
         OCR1B = pause_delay;
     }
+    // Enable interrupts processing
     TIMSK1 |= _BV(OCIE1A) | _BV(OCIE1B);
 }
 
@@ -201,12 +239,14 @@ ISR(TIMER1_COMPA_vect) {
             break;
         case 2:
             M3 = 0;
+// Mirror M3 to M5 if it's not used
 #if !M5_USED
             M5 = 0;
 #endif
             break;
         case 3:
             M4 = 0;
+// Mirror M4 to M6 if it's not used
 #if !M6_USED
             M6 = 0;
 #endif
@@ -223,18 +263,21 @@ ISR(TIMER1_COMPA_vect) {
 #endif
         }
         if (motor_next == 0) {
-            // We are finished here, disable further interrupts
+            /* Whew, we are done here - disable further interrupts and get some
+             *  rest */
             TIMSK1 &= ~_BV(OCIE1A);
             break;
         }
+        // Check for magic
         if (motors_list[motor_next - 1].offset != 0) {
-            // Normal case - next line will be release in some time later
+            /* Normal case - next line will be release in some time later.
+             *  Setup event for that time and exit. */
             OCR1A = motors_list[motor_next - 1].offset;
             // Need to decrement manually as we are breaking the loop
             motor_next--;
             break;
         }
-        // Otherwise go and release other line
+        // Otherwise go and release next line
     }
 }
 
@@ -244,290 +287,6 @@ ISR(TIMER1_COMPB_vect) {
     TIMSK1 &= ~_BV(OCIE1B);
     motorReady = true;
 }
-
-#if 0
-void motorOutputPPM(struct MT_STATE_S *state) {
-    static int16_t MotorStartTCNT1;
-    int16_t t;
-
-    /*
-     * Bound pulse length to 1ms <= pulse <= 2ms.
-     */
-
-    t = 1000;
-    if (state->m1out < 0)
-        state->m1out = 0;
-    else if (state->m1out > t)
-        state->m1out = t;
-#ifdef SINGLE_COPTER
-    t = 2000;
-#endif
-    if (state->m2out < 0)
-        state->m2out = 0;
-    else if (state->m2out > t)
-        state->m2out = t;
-    if (state->m3out < 0)
-        state->m3out = 0;
-    else if (state->m3out > t)
-        state->m3out = t;
-    if (state->m4out < 0)
-        state->m4out = 0;
-    else if (state->m4out > t)
-        state->m4out = t;
-#if M5_USED
-    if(state->m5out < 0)
-        state->m5out = 0;
-    else if(state->m5out > t)
-        state->m5out = t;
-#endif
-#if M6_USED
-    if(state->m6out < 0)
-        state->m6out = 0;
-    else if(state->m6out > t)
-        state->m6out = t;
-#endif
-
-    t = 1000;
-    state->m1out += t;
-#ifndef SINGLE_COPTER
-    state->m2out += t;
-    state->m3out += t;
-    state->m4out += t;
-#if M5_USED
-    state->m5out+= t;
-#endif
-#if M6_USED
-    state->m6out+= t;
-#endif
-#endif
-
-    state->m1out <<= 3;
-    state->m2out <<= 3;
-    state->m3out <<= 3;
-    state->m4out <<= 3;
-#if M5_USED
-    state->m5out<<= 3;
-#endif
-#if M6_USED
-    state->m6out<<= 3;
-#endif
-
-    /*
-     * We can use timer compare output mode to provide jitter-free
-     * PPM output on M1, M2, M5 and M6 by using OC0A and OC0B from
-     * timer 0 (8-bit) and OC1A and OC1B from timer 1 (16-bit) to
-     * turn off the pins. Since we are counting in steps of 1us and
-     * need to wait up to 2ms, we need to delay the turn-on of the
-     * 8-bit pins to avoid early triggering.
-     *
-     * Once entering compare match output mode, we cannot directly
-     * set the pins. We can use the "force output compare" (which
-     * doesn't actually force a compare but pretends the comparison
-     * was true) to fiddle output high or low, but this would still
-     * have interrupt and instruction-timing-induced jitter. Instead,
-     * we just set the next desired switch state and set the OCRnx
-     * registers to a known time in the future. The 8-bit ones will
-     * set the pin the same way several times, so we have to make
-     * sure that we don't change the high/low mode too early.
-     *
-     * Hardware PPM (timer compare output mode) pin mapping:
-     *
-     * M1 (PB2): OCR1B (COM1B) 16-bit
-     * M2 (PB1): OCR1A (COM1A) 16-bit
-     * M3 (PB0): software only
-     * M4 (PD7): software only
-     * M5 (PD6): OCR0A (COM0A) 8-bit
-     * M6 (PD5): OCR0B (COM0B) 8-bit
-     *
-     * We must disable interrupts while setting the 16-bit registers
-     * to avoid Rx interrupts clobbering the internal temporary
-     * register for the associated 16-bit timer. 8 cycles is one
-     * microsecond at 8 MHz, so we try not to leave interrupts
-     * disabled for more than 8 cycles.
-     *
-     * We turn OFF the pins here, then wait for the ON cycle start.
-     */
-    t = MotorStartTCNT1 + state->m1out;
-    asm(""::"r" (t)); // Avoid reordering of add after cli
-    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-        OCR1B = t;
-    }
-    t = MotorStartTCNT1 + state->m2out;
-    asm(""::"r" (t)); // Avoid reordering of add after cli
-    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-        OCR1A = t;
-    }
-    TCCR1A = _BV(COM1A1) | _BV(COM1B1); /* Next match will clear pins */
-
-    /*
-     * Only 8 bits will make it to the OCR0x registers, so leave the
-     * mode as setting pins ON here and then change to OFF mode after
-     * the last wrap before the actual time.
-     *
-     * We hope that TCNT0 and TCNT1 are always synchronized.
-     */
-#if M5_USED
-    OCR0A = MotorStartTCNT1 + state->m5out;
-#else
-    OCR0A = MotorStartTCNT1 + state->m3out;
-#endif
-#if M6_USED
-    OCR0B = MotorStartTCNT1 + state->m6out;
-#else
-    OCR0B = MotorStartTCNT1 + state->m4out;
-#endif
-
-    do {
-        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-            t = TCNT1;
-        }
-        t -= MotorStartTCNT1;
-        if (t >= state->m3out)
-            M3 = 0;
-        if (t >= state->m4out)
-            M4 = 0;
-        if (t + 0xff >=
-#if M5_USED
-                state->m5out
-#else
-                state->m3out
-#endif
-        )
-            TCCR0A &= ~_BV(COM0A0); /* Clear pin on match */
-        if (t + 0xff >=
-#if M6_USED
-                state->m6out
-#else
-                state->m4out
-#endif
-        )
-            TCCR0A &= ~_BV(COM0B0); /* Clear pin on match */
-        t -= ((2000 + PWM_LOW_PULSE_US) << 3) - 0xff;
-    } while (t < 0);
-
-    /*
-     * We should now be <= 0xff ticks before the next on cycle.
-     *
-     * Set up the timer compare values, wait for the on time, then
-     * turn on software pins. We hope that we will be called again
-     * within 1ms so that we can turn them off again in time.
-     *
-     * Timer compare output mode must stay enabled, and disables
-     * regular output when enabled. The value of the COMnx0 bits set
-     * the pin high or low when the timer value matches the OCRnx
-     * value, or immediately when forced with the FOCnx bits.
-     */
-
-    MotorStartTCNT1 += (2000 + PWM_LOW_PULSE_US) << 3;
-#if 0
-    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-        t = TCNT1;
-    }
-    t+= 0x3f;
-    t-= MotorStartTCNT1;
-    if(t >= 0) {
-        /*
-         * We've already passed the on cycle, hmm.
-         * Push it into the future.
-         */
-        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-            t = TCNT1;
-        }
-        MotorStartTCNT1 = t + 0xff;
-    }
-#endif
-    t = MotorStartTCNT1;
-    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-        OCR1B = t;
-    }
-    OCR0A = t;
-    OCR0B = t;
-    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-        OCR1A = t;
-    }
-
-#ifdef SINGLE_COPTER
-    if(servo_skip == 0) {
-        TCCR1A = _BV(COM1A1) | _BV(COM1A0) | _BV(COM1B1) | _BV(COM1B0);
-        //    TCCR1C = _BV(FOC1A) | _BV(FOC1B);
-        TCCR0A = _BV(COM0A1) | _BV(COM0A0) | _BV(COM0B1) | _BV(COM0B0);
-        //    TCCR0B = _BV(CS00) | _BV(FOC0A) | _BV(FOC0B);
-    } else {
-        TCCR1A = _BV(COM1A1) | _BV(COM1B1) | _BV(COM1B0);
-        //    TCCR1C = _BV(FOC1A) | _BV(FOC1B);
-    }
-#elif defined(DUAL_COPTER) || defined(TWIN_COPTER)
-    TCCR1A = _BV(COM1A1) | _BV(COM1A0) | _BV(COM1B1) | _BV(COM1B0);
-    //  TCCR1C = _BV(FOC1A) | _BV(FOC1B);
-    if(servo_skip == 0) {
-        TCCR0A = _BV(COM0A1) | _BV(COM0A0) | _BV(COM0B1) | _BV(COM0B0);
-        //    TCCR0B = _BV(CS00) | _BV(FOC0A) | _BV(FOC0B);
-    }
-#elif defined(TRI_COPTER)
-    TCCR1A = _BV(COM1A1) | _BV(COM1A0) | _BV(COM1B1) | _BV(COM1B0);
-    //  TCCR1C = _BV(FOC1A) | _BV(FOC1B);
-    if(servo_skip == 0) {
-        TCCR0A = _BV(COM0A1) | _BV(COM0A0) | _BV(COM0B1) | _BV(COM0B0);
-        //    TCCR0B = _BV(CS00) | _BV(FOC0A) | _BV(FOC0B);
-    } else {
-        TCCR0A = _BV(COM0A1) | _BV(COM0A0) | _BV(COM0B1);
-        //    TCCR0B = _BV(CS00) | _BV(FOC0A) | _BV(FOC0B);
-    }
-#elif defined(QUAD_COPTER) \
-    || defined(QUAD_X_COPTER) \
-    || defined(Y4_COPTER) \
-    || defined(HEX_COPTER) \
-    || defined(Y6_COPTER)
-    TCCR1A = _BV(COM1A1) | _BV(COM1A0) | _BV(COM1B1) | _BV(COM1B0);
-    //  TCCR1C = _BV(FOC1A) | _BV(FOC1B);
-    TCCR0A = _BV(COM0A1) | _BV(COM0A0) | _BV(COM0B1) | _BV(COM0B0);
-    //  TCCR0B = _BV(CS00) | _BV(FOC0A) | _BV(FOC0B);
-#endif
-
-    /*
-     * Wait for the on time so we can turn on the software pins.
-     */
-    do {
-        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-            t = TCNT1;
-        }
-        t -= MotorStartTCNT1;
-    } while (t < 0);
-
-#ifdef SINGLE_COPTER
-    if(servo_skip == 0) {
-        M3 = 1;
-        M4 = 1;
-        servo_skip = servo_skip_divider;
-    }
-    servo_skip--;
-#elif defined(DUAL_COPTER) || defined(TWIN_COPTER)
-    if(servo_skip == 0) {
-        M3 = 1;
-        M4 = 1;
-        servo_skip = servo_skip_divider;
-    }
-    servo_skip--;
-#elif defined(TRI_COPTER)
-    M3 = 1;
-    if(servo_skip == 0) {
-        M4 = 1;
-        servo_skip = servo_skip_divider;
-    }
-    servo_skip--;
-#elif defined(QUAD_COPTER) \
-    || defined(QUAD_X_COPTER) \
-    || defined(Y4_COPTER) \
-    || defined(HEX_COPTER) \
-    || defined(Y6_COPTER)
-    M3 = 1;
-    M4 = 1;
-#endif
-    /*
-     * We leave with the output pins ON.
-     */
-}
-#endif
 
 void motorsIdentify() {
     LED = 0;
