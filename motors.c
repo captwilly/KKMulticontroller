@@ -262,10 +262,6 @@ void motorOutputPPM(struct MT_STATE_S *state){
     motorReady = false;
 
 
-    /* We will use all motor_list contents in ISR indexing it reverse direction.
-     *  So put the last possible index here */
-    motor_next = MOTOR_COUNT - 1;
-
     /* Loop trough sorted motors array (motors[sort_result[i]]) in reverse
      *  direction copying values and doing some magic */
     for (int8_t i = MOTOR_COUNT - 1; i >= 0; i--) {
@@ -288,10 +284,6 @@ void motorOutputPPM(struct MT_STATE_S *state){
         }
 #endif
 
-        // Finally invert mask as we are going to clear pins
-        motors_list[i].portb_mask = ~motors_list[i].portb_mask;
-        motors_list[i].portd_mask = ~motors_list[i].portd_mask;
-
         // Here comes magic
         if (i != (MOTOR_COUNT - 1) &&
                 (motors[sort_result[i]] - motors[sort_result[i + 1]]) < MIN_DIST) {
@@ -310,6 +302,47 @@ void motorOutputPPM(struct MT_STATE_S *state){
     }
 
 
+    /* Compact formed list so it could be processed faster in ISR.
+     *  This is done by OR-ing all bitmasks in items with same offsets.
+     *  So all the magic from previous loop will not come to ISR. */
+    for (uint8_t offset = 0, motor_next = 0;
+            motor_next + offset < MOTOR_COUNT; motor_next++) {
+        uint8_t offset_tmp = offset;
+
+        for (; motor_next + offset < MOTOR_COUNT; offset++) {
+            // First iteration
+            if (offset == offset_tmp) {
+                // Copy mask (for first iteration)
+                motors_list[motor_next].portb_mask =
+                        motors_list[motor_next + offset].portb_mask;
+                motors_list[motor_next].portd_mask =
+                        motors_list[motor_next + offset].portd_mask;
+            } else {
+                // OR mask (for next iterations)
+                motors_list[motor_next].portb_mask |=
+                        motors_list[motor_next + offset].portb_mask;
+                motors_list[motor_next].portd_mask |=
+                        motors_list[motor_next + offset].portd_mask;
+            }
+            // Last iteration
+            if (motors_list[motor_next + offset].offset != 0) {
+                // Copy offset (for last iteration)
+                motors_list[motor_next].offset =
+                        motors_list[motor_next + offset].offset;
+
+                /* Invert mask so it will be more suitable to clear port bits
+                 *  in ISR */
+                motors_list[motor_next].portb_mask =
+                        ~motors_list[motor_next].portb_mask;
+                motors_list[motor_next].portd_mask =
+                        ~motors_list[motor_next].portd_mask;
+                break;
+            }
+        }
+    }
+    // After that motor_next have valid index to use it within ISR
+
+
     // Start outputting signal
     motorWriteAllPins(true);
 
@@ -324,9 +357,9 @@ void motorOutputPPM(struct MT_STATE_S *state){
 
     /* Calculate initial value for our main compare register.
      *  This should be offset for motor with lowest value and that in turn
-     *  resides in the last member of the motor_list because we have sorted it.
+     *  resides the member of "motor_list" indicated by "motor_next"
      */
-    uint16_t pulse_delay = curr_cnt + (motors_list[MOTOR_COUNT - 1].offset);
+    uint16_t pulse_delay = curr_cnt + (motors_list[motor_next].offset);
 
     /* Second available compare register will be used to add some pause in
      *  pulses generation to ensure that we have pulses rate not higher than
@@ -368,30 +401,20 @@ void motorOutputPPM(struct MT_STATE_S *state){
 /* WARNING: consider setting appropriate MIN_DIST value when changing following
  *  ISR handler (that setting is tightly coupled with handler execution time) */
 ISR(TIMER1_COMPA_vect) {
-    /* Loop through motor list (from highest index set in motorOutputPPM to
-     * zero) */
-    for (;; motor_next--) {
-        // Release needed lines
-        PORTB &= motors_list[motor_next].portb_mask;
-        PORTD &= motors_list[motor_next].portd_mask;
+    // Release needed lines
+    PORTB &= motors_list[motor_next].portb_mask;
+    PORTD &= motors_list[motor_next].portd_mask;
 
-        if (motor_next == 0) {
-            /* Whew, we are done here - disable further interrupts and get some
-             *  rest */
-            TIMSK1 &= ~_BV(OCIE1A);
-            break;
-        }
-        // Check for magic
-        if (motors_list[motor_next - 1].offset != 0) {
-            /* Normal case - next line will be release in some time later.
-             *  Setup event for that time and exit. */
-            OCR1A = motors_list[motor_next - 1].offset;
-            // Need to decrement manually as we are breaking the loop
-            motor_next--;
-            break;
-        }
-        // Otherwise go and release next line
+    if (motor_next == 0) {
+        /* Whew, we are done here - disable further interrupts and get some
+         *  rest */
+        TIMSK1 &= ~_BV(OCIE1A);
+        return;
     }
+
+    // Setup event for that time and exit
+    motor_next--;
+    OCR1A = motors_list[motor_next].offset;
 }
 
 ISR(TIMER1_COMPB_vect) {
