@@ -26,7 +26,8 @@
 
 static struct {
     uint16_t offset;
-    uint8_t number;
+    uint8_t portb_mask;
+    uint8_t portd_mask;
 } motors_list[MOTOR_COUNT];
 static uint16_t motor_next;
 
@@ -41,6 +42,124 @@ uint16_t servo_skip_divider;
 
 static volatile bool motorReady = true;
 
+static void motorWriteAllPins(bool value) {
+    uint8_t portb_mask = 0;
+    uint8_t portd_mask = 0;
+
+#if M1_IS_PORTB
+    portb_mask |= M1;
+#elif M1_IS_PORTD
+    portd_mask |= M1;
+#else
+#error "Motor pin location should be either PORTB or PORTC"
+#endif
+#if M2_IS_PORTB
+    portb_mask |= M2;
+#elif M2_IS_PORTD
+    portd_mask |= M2;
+#else
+#error "Motor pin location should be either PORTB or PORTC"
+#endif
+#if M3_IS_PORTB
+    portb_mask |= M3;
+#elif M3_IS_PORTD
+    portd_mask |= M3;
+#else
+#error "Motor pin location should be either PORTB or PORTC"
+#endif
+#if M4_IS_PORTB
+    portb_mask |= M4;
+#elif M4_IS_PORTD
+    portd_mask |= M4;
+#else
+#error "Motor pin location should be either PORTB or PORTC"
+#endif
+#if M5_IS_PORTB
+    portb_mask |= M5;
+#elif M5_IS_PORTD
+    portd_mask |= M5;
+#else
+#error "Motor pin location should be either PORTB or PORTC"
+#endif
+#if M6_IS_PORTB
+    portb_mask |= M6;
+#elif M6_IS_PORTD
+    portd_mask |= M6;
+#else
+#error "Motor pin location should be either PORTB or PORTC"
+#endif
+
+    if (value) {
+        PORTB |= portb_mask;
+        PORTD |= portd_mask;
+    } else {
+        PORTB &= ~portb_mask;
+        PORTD &= ~portd_mask;
+    }
+}
+
+static uint8_t motorGetPorbMask(uint8_t mtr_num){
+    switch (mtr_num) {
+#if M1_IS_PORTB
+    case 0:
+        return M1;
+#endif
+#if M2_IS_PORTB
+    case 1:
+        return M2;
+#endif
+#if M3_IS_PORTB
+    case 2:
+        return M3;
+#endif
+#if M4_IS_PORTB
+    case 3:
+        return M4;
+#endif
+#if M5_IS_PORTB
+    case 4:
+        return M5;
+#endif
+#if M6_IS_PORTB
+    case 5:
+        return M6;
+#endif
+    default:
+        return 0;
+    }
+}
+
+static uint8_t motorGetPordMask(uint8_t mtr_num){
+    switch (mtr_num) {
+#if M1_IS_PORTD
+    case 0:
+        return M1;
+#endif
+#if M2_IS_PORTD
+    case 1:
+        return M2;
+#endif
+#if M3_IS_PORTD
+    case 2:
+        return M3;
+#endif
+#if M4_IS_PORTD
+    case 3:
+        return M4;
+#endif
+#if M5_IS_PORTD
+    case 4:
+        return M5;
+#endif
+#if M6_IS_PORTD
+    case 5:
+        return M6;
+#endif
+    default:
+        return 0;
+    }
+}
+
 void motorsSetup() {
     M1_DIR = OUTPUT;
     M2_DIR = OUTPUT;
@@ -48,12 +167,9 @@ void motorsSetup() {
     M4_DIR = OUTPUT;
     M5_DIR = OUTPUT;
     M6_DIR = OUTPUT;
-    M1 = 0;
-    M2 = 0;
-    M3 = 0;
-    M4 = 0;
-    M5 = 0;
-    M6 = 0;
+
+    motorWriteAllPins(false);
+
 
     /*
      * timer0 (8bit) - run at 8MHz, used to control ESC pulses
@@ -153,7 +269,30 @@ void motorOutputPPM(struct MT_STATE_S *state){
     /* Loop trough sorted motors array (motors[sort_result[i]]) in reverse
      *  direction copying values and doing some magic */
     for (int8_t i = MOTOR_COUNT - 1; i >= 0; i--) {
-        motors_list[i].number = sort_result[i];
+        // Form mask which will be applied to ports in ISR
+        motors_list[i].portb_mask = motorGetPorbMask(sort_result[i]);
+        motors_list[i].portd_mask = motorGetPordMask(sort_result[i]);
+
+        // Reuse M5 if it's not required by copter configuration
+#if !M5_USED
+        if (sort_result[i] == 2) {
+            motors_list[i].portb_mask |= motorGetPorbMask(4);
+            motors_list[i].portd_mask |= motorGetPordMask(4);
+        }
+#endif
+        // Reuse M6 if it's not required by copter configuration
+#if !M6_USED
+        if (sort_result[i] == 3) {
+            motors_list[i].portb_mask |= motorGetPorbMask(4);
+            motors_list[i].portd_mask |= motorGetPordMask(5);
+        }
+#endif
+
+        // Finally invert mask as we are going to clear pins
+        motors_list[i].portb_mask = ~motors_list[i].portb_mask;
+        motors_list[i].portd_mask = ~motors_list[i].portd_mask;
+
+        // Here comes magic
         if (i != (MOTOR_COUNT - 1) &&
                 (motors[sort_result[i]] - motors[sort_result[i + 1]]) < MIN_DIST) {
             /* Due to ISR latency we can't output values which are closer than
@@ -172,7 +311,7 @@ void motorOutputPPM(struct MT_STATE_S *state){
 
 
     // Start outputting signal
-    M1 = 1; M2 = 1; M3 = 1; M4 = 1; M5 = 1; M6 = 1;
+    motorWriteAllPins(false);
 
     /* Remember current counter value to base compare further compare events on
      *  it */
@@ -225,43 +364,17 @@ void motorOutputPPM(struct MT_STATE_S *state){
     TIMSK1 |= _BV(OCIE1A) | _BV(OCIE1B);
 }
 
+
+/* WARNING: consider setting appropriate MIN_DIST value when changing following
+ *  ISR handler (that setting is tightly coupled with handler execution time) */
 ISR(TIMER1_COMPA_vect) {
     /* Loop through motor list (from highest index set in motorOutputPPM to
      * zero) */
     for (;; motor_next--) {
-        // Decide which line should go down now
-        switch (motors_list[motor_next].number) {
-        case 0:
-            M1 = 0;
-            break;
-        case 1:
-            M2 = 0;
-            break;
-        case 2:
-            M3 = 0;
-// Mirror M3 to M5 if it's not used
-#if !M5_USED
-            M5 = 0;
-#endif
-            break;
-        case 3:
-            M4 = 0;
-// Mirror M4 to M6 if it's not used
-#if !M6_USED
-            M6 = 0;
-#endif
-            break;
-#if M5_USED
-        case 4:
-            M5 = 0;
-            break;
-#endif
-#if M5_USED
-        case 5:
-            M6 = 0;
-            break;
-#endif
-        }
+        // Release needed lines
+        PORTB &= motors_list[motor_next].portb_mask;
+        PORTD &= motors_list[motor_next].portd_mask;
+
         if (motor_next == 0) {
             /* Whew, we are done here - disable further interrupts and get some
              *  rest */

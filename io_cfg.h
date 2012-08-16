@@ -48,12 +48,26 @@
                                 _BV(GAIN_YAW_ADC_CH)        \
                             )
 
-#define M1                  REGISTER_BIT(PORTB,2)
-#define M2                  REGISTER_BIT(PORTB,1)
-#define M3                  REGISTER_BIT(PORTB,0)
-#define M4                  REGISTER_BIT(PORTD,7)
-#define M5                  REGISTER_BIT(PORTD,6)
-#define M6                  REGISTER_BIT(PORTD,5)
+/* WARNING: PORTB and PORTD are only currently supported for this.
+ *  It's easy to add such support but performance will suffer a bit */
+#define M1_IS_PORTB         1
+#define M1_IS_PORTD         0
+#define M2_IS_PORTB         1
+#define M2_IS_PORTD         0
+#define M3_IS_PORTB         1
+#define M3_IS_PORTD         0
+#define M4_IS_PORTB         0
+#define M4_IS_PORTD         1
+#define M5_IS_PORTB         0
+#define M5_IS_PORTD         1
+#define M6_IS_PORTB         0
+#define M6_IS_PORTD         1
+#define M1                  _BV(2)
+#define M2                  _BV(1)
+#define M3                  _BV(0)
+#define M4                  _BV(7)
+#define M5                  _BV(6)
+#define M6                  _BV(5)
 #define M1_DIR              REGISTER_BIT(DDRB,2)
 #define M2_DIR              REGISTER_BIT(DDRB,1)
 #define M3_DIR              REGISTER_BIT(DDRB,0)
