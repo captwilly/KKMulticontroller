@@ -4,9 +4,9 @@
 #include <util/delay.h>
 #include <util/atomic.h>
 
-// 168 CPU tacts for ISR to finish - about 2% error
+// 112 CPU tacts for ISR to finish - 1.4% error
 // TODO: decrease this as much as possible
-#define MIN_DIST    21
+#define MIN_DIST    14
 
 #define ESC_PERIOD  F_CPU / ESC_RATE
 #if ESC_RATE >= 500
@@ -311,7 +311,7 @@ void motorOutputPPM(struct MT_STATE_S *state){
 
 
     // Start outputting signal
-    motorWriteAllPins(false);
+    motorWriteAllPins(true);
 
     /* Remember current counter value to base compare further compare events on
      *  it */
