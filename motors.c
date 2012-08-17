@@ -29,7 +29,7 @@ static struct {
     uint8_t portb_mask;
     uint8_t portd_mask;
 } motors_list[MOTOR_COUNT];
-static uint16_t motor_next;
+static uint8_t motor_next;
 
 // TODO: implement Servo skip
 #if defined(SINGLE_COPTER) \
