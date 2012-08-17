@@ -305,7 +305,8 @@ void motorOutputPPM(struct MT_STATE_S *state){
     /* Compact formed list so it could be processed faster in ISR.
      *  This is done by OR-ing all bitmasks in items with same offsets.
      *  So all the magic from previous loop will not come to ISR. */
-    for (uint8_t offset = 0, motor_next = 0;
+    motor_next = 0;
+    for (uint8_t offset = 0;
             motor_next + offset < MOTOR_COUNT; motor_next++) {
         uint8_t offset_tmp = offset;
 
@@ -340,7 +341,9 @@ void motorOutputPPM(struct MT_STATE_S *state){
             }
         }
     }
-    // After that motor_next have valid index to use it within ISR
+
+    // Point to the last item in motors_list
+    motor_next -= 1;
 
 
     // Start outputting signal
