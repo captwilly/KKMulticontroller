@@ -4,9 +4,9 @@
 #include <util/delay.h>
 #include <util/atomic.h>
 
-// 112 CPU tacts for ISR to finish - 1.4% error
+// 160 CPU tacts for ISR to finish - 2% error
 // TODO: decrease this as much as possible
-#define MIN_DIST    14
+#define MIN_DIST    20
 
 #define ESC_PERIOD  F_CPU / ESC_RATE
 #if ESC_RATE >= 500
