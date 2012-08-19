@@ -3,6 +3,23 @@
 
 #include "common.h"
 
+/******************************************************************************
+ ***    Defines                                                             ***
+ ******************************************************************************/
+#if defined(SINGLE_COPTER)                                                  \
+    || defined(TWIN_COPTER)                                                 \
+    || defined(HEX_COPTER)                                                  \
+    || defined(Y6_COPTER)
+#define M5_USED 1
+#else
+#define M5_USED 0
+#endif
+#if defined(TWIN_COPTER) || defined(HEX_COPTER) || defined(Y6_COPTER)
+#define M6_USED 1
+#else
+#define M6_USED 0
+#endif
+
 
 /******************************************************************************
  ***    Types                                                               ***

@@ -3,6 +3,7 @@
 #include "receiver.h"
 #include "settings.h"
 #include "adc.h"
+#include "led.h"
 #include <string.h>
 #include <util/delay.h>
 
@@ -95,46 +96,40 @@ void gyrosReverse(void) {
     struct SETTINGS_S set;
 
     // flash LED 3 times
-    for (uint8_t i = 0; i < 3; i++) {
-        LED = 1;
-        _delay_ms(25);
-        LED = 0;
-        _delay_ms(25);
-    }
+    LED_BLINK(50, 3);
 
-    while (true) {
+    FOREVER {
         receiverGetChannels(&rxState);
         settingsRead(&set);
 
         if (rxState.roll < -STICK_THROW) { // normal(left)
             set.RollGyroDirection = GYRO_NORMAL;
             settingsWrite(&set);
-            LED = 1;
+            LED_ON();
         }
         if (rxState.roll > STICK_THROW) { // reverse(right)
             set.RollGyroDirection = GYRO_REVERSED;
             settingsWrite(&set);
-            LED = 1;
+            LED_ON();
         } else if (rxState.pitch < -STICK_THROW) { // normal(up)
             set.PitchGyroDirection = GYRO_NORMAL;
             settingsWrite(&set);
-            LED = 1;
+            LED_ON();
         } else if (rxState.pitch > STICK_THROW) { // reverse(down)
             set.PitchGyroDirection = GYRO_REVERSED;
             settingsWrite(&set);
-            LED = 1;
+            LED_ON();
         } else if (rxState.yaw < -STICK_THROW) { // normal(left)
             set.YawGyroDirection = GYRO_NORMAL;
             settingsWrite(&set);
-            LED = 1;
+            LED_ON();
         } else if (rxState.yaw > STICK_THROW) { // reverse(right)
             set.YawGyroDirection = GYRO_REVERSED;
             settingsWrite(&set);
-            LED = 1;
+            LED_ON();
         }
 
         _delay_ms(50);
-        LED = 0;
-
+        LED_OFF();
     }
 }

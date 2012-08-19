@@ -1,6 +1,7 @@
 #include "motors.h"
 
 #include "receiver.h"
+#include "led.h"
 #include <util/delay.h>
 #include <util/atomic.h>
 
@@ -31,17 +32,6 @@
 #error "Servo rate is too low"
 #endif
 
-#if defined(SINGLE_COPTER) || defined(TWIN_COPTER) || defined(HEX_COPTER) || defined(Y6_COPTER)
-#define M5_USED 1
-#else
-#define M5_USED 0
-#endif
-#if defined(TWIN_COPTER) || defined(HEX_COPTER) || defined(Y6_COPTER)
-#define M6_USED 1
-#else
-#define M6_USED 0
-#endif
-
 #if M5_USED && M6_USED
 #define MOTOR_COUNT 6
 #elif M5_USED || M6_USED
@@ -50,13 +40,8 @@
 #define MOTOR_COUNT 4
 #endif
 
-#if defined (SINGLE_COPTER) || defined(DUAL_COPTER) || defined(TWIN_COPTER) || defined(TRI_COPTER)\
-    || defined(QUAD_COPTER)
+#if defined (SINGLE_COPTER) || defined(DUAL_COPTER) || defined(TWIN_COPTER) || defined(TRI_COPTER)
 #define SERVO_PRESENT
-#endif
-
-#if defined(QUAD_COPTER)
-#define MASK_SERVO  (_BV(0) | _BV(2))
 #endif
 
 #if defined(SINGLE_COPTER)
@@ -492,34 +477,37 @@ void motorOutputPPM(struct MT_STATE_S *state){
 }
 
 void motorsIdentify() {
-    LED = 0;
+    LED_OFF();
     int8_t motor = 0;
     uint16_t delay = 0;
     uint16_t time = TCNT2;
-    bool escInit = true; // Wait until the ESCs have initialized
+    bool escNotInit = true; // Wait until the ESCs have initialized
+    bool spin = true;
     struct MT_STATE_S motors;
 
-    while (true) {
+    FOREVER {
         delay += (uint8_t) (TCNT2 - time);
         time = TCNT2;
 
-        if (escInit) {
+        if (escNotInit) {
             if (delay > 23437) { // 3.00 second delay (3.00 / .000128 = 23437.5)
-                escInit = false;
+                escNotInit = false;
                 delay = 0;
             }
-        } else if (LED) {
+        } else if (spin) {
             if (delay > 1171) { // 0.15 second delay (0.15 / .000128 = 1171.8)
                 if (++motor > 6) {
                     motor = 0;
                 }
                 delay = 0;
-                LED = !LED;
+                LED_OFF();
+                spin = false;
             }
         } else {
             if (delay > 7812) { // 1.00 second delay (1.00 / .000128 = 7812.5)
                 delay = 0;
-                LED = !LED;
+                LED_ON();
+                spin = true;
             }
         }
 
@@ -534,7 +522,7 @@ void motorsIdentify() {
         motors.m6out = 0;
 #endif
 
-        if (LED) {
+        if (spin) {
             if (motor == 1) {
                 motors.m1out = MOTOR_LOWEST_VALUE;
             }
@@ -568,14 +556,9 @@ void motorsThrottleCalibration() {
     struct RX_STATE_S rxState;
 
     // flash LED 3 times
-    for (uint8_t i = 0; i < 3; i++) {
-        LED = 1;
-        _delay_ms(25);
-        LED = 0;
-        _delay_ms(25);
-    }
+    LED_BLINK(50, 3);
 
-    while (true) {
+    FOREVER {
         receiverGetChannels(&rxState);
 #ifdef SINGLE_COPTER
         motors.m1out = rxState.collective;

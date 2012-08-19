@@ -1,6 +1,7 @@
 #include "receiver.h"
 
 #include "settings.h"
+#include "led.h"
 #include <stdlib.h>
 #include <util/atomic.h>
 #include <util/delay.h>
@@ -136,14 +137,14 @@ void receiverGetChannels(struct RX_STATE_S *state) {
 void receiverStickCenterManual(void) {
     struct RX_STATE_S rxState;
     uint8_t i;
-    while (true) {
+    FOREVER {
         receiverGetChannelsClean(&rxState);
         i = abs(rxState.roll) + abs(rxState.pitch) + abs(rxState.yaw);
         i = i / 4;
         i = i >= 25 ? 25 : i;
-        LED = 0;
+        LED_ON();
         _delay_ms(25 - i);
-        LED = 1;
+        LED_OFF();
         _delay_ms(i);
     }
 }
@@ -205,7 +206,7 @@ void receiverStickCenterAutomatic(void) {
         }
 
         // Blink
-        LED = ~LED;
+        LED_INVERT();
         /* Wait enough time for Rx data to update (60ms should be enough
          *  considering that receiver gives pulse every 50ms) */
         _delay_ms(60);
@@ -223,5 +224,5 @@ void receiverStickCenterAutomatic(void) {
 
     settingsWrite(&settings);
     // Wait for reboot
-    FOREVER {LED = ~LED; _delay_ms(1000);};
+    LED_BLINK_FOREVER(2000);
 }

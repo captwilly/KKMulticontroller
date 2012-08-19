@@ -1,6 +1,7 @@
 #include "settings.h"
 
 #include "gyros.h"
+#include "led.h"
 #include <avr/eeprom.h>
 #include <util/delay.h>
 #include <util/crc16.h>
@@ -76,12 +77,7 @@ void settingsWrite(struct SETTINGS_S *settings) {
             &check, &default_settings, sizeof(struct SETTINGS_STORED_S));
     if (0 != memcmp(&to_store, &check, sizeof(struct SETTINGS_STORED_S))) {
         // Indicate an error if problem reading
-        while (true) {
-            LED = 1;
-            _delay_ms(1000);
-            LED = 0;
-            _delay_ms(1000);
-        }
+        LED_BLINK_FOREVER(2000);
     }
 }
 
@@ -115,24 +111,14 @@ void settingsRead(struct SETTINGS_S *settings) {
 
         // Check for proper settings version
         if (settings->Version != EEPROM_SETTINGS_VERSION) {
-            while (true) {
-                LED = 1;
-                _delay_ms(1000);
-                LED = 0;
-                _delay_ms(1000);
-            }
+            LED_BLINK_FOREVER(2000);
         }
     }
 }
 
 void settingsClearAll() {
-    for (uint8_t i = 0; i < 5; i++) {
-        LED = 1;
-        _delay_ms(25);
-        LED = 0;
-        _delay_ms(25);
-    }
+    LED_BLINK(50, 5)
 
     settingsSetDefaults();
-    while (true);
+    FOREVER{};
 }

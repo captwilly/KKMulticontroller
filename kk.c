@@ -4,6 +4,7 @@
 #include "settings.h"
 #include "receiver.h"
 #include "motors.h"
+#include "led.h"
 #include <stdlib.h>
 #include <util/delay.h>
 #include <avr/interrupt.h>
@@ -26,8 +27,8 @@ static void setup() {
     struct GYRO_GAIN_ADC_S pots;
     MCUCR = _BV(PUD); // Disable hardware pull-up
 
-    LED_DIR = OUTPUT;
-    LED = 0;
+    LED_INIT();
+    LED_OFF();
 
     receiverSetup();
     gyrosSetup();
@@ -48,9 +49,7 @@ static void setup() {
     /*
      * Flash the LED once at power on
      */
-    LED = 1;
-    _delay_ms(150);
-    LED = 0;
+    LED_BLINK(300, 1);
 
     sei();
 
@@ -135,12 +134,12 @@ static inline void main_loop() {
     struct RX_STATE_S rxState;
     struct GYRO_GAIN_ADC_S pots;
     struct GYRO_STATE_S gyro;
-    struct GYRO_STATE_S integral;   // PID integral term
-    struct GYRO_STATE_S last_error; // Last proportional error
+    struct GYRO_STATE_S integral = {.yaw = 0};   // PID integral term
+    struct GYRO_STATE_S last_error = {.yaw = 0}; // Last proportional error
 
-    while (true) {
+    FOREVER {
 
-        LED = Armed;
+        LED_WRITE(Armed);
 
         receiverGetChannels(&rxState);
 
@@ -460,7 +459,7 @@ static inline void main_loop() {
             motors.m6out = MAX(MOTOR_LOWEST_VALUE, motors.m6out);
 #endif
 
-            LED = 0;
+            LED_OFF();
             motorOutputPPM(&motors);
         }
     }
