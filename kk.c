@@ -170,20 +170,28 @@ static inline void main_loop() {
                     gyrosCalibrate();
             }
 
+#ifndef NOT_ARMED_ESC_SIGNAL
+            if (Armed) {
+#endif // NOT_ARMED_ESC_SIGNAL
             /* turn off motors */
 #if defined(DUAL_COPTER) || defined(TWIN_COPTER) || defined(TRI_COPTER)
             setMotorZero(!Armed);
 #else
             setMotorZero();
 #endif
+#ifndef NOT_ARMED_ESC_SIGNAL
+            }
+#endif // NOT_ARMED_ESC_SIGNAL
         }
         else if(!Armed){
+#ifdef NOT_ARMED_ESC_SIGNAL
             /* turn off motors */
 #if defined(DUAL_COPTER) || defined(TWIN_COPTER) || defined(TRI_COPTER)
             setMotorZero(true);
 #else
             setMotorZero();
 #endif
+#endif // NOT_ARMED_ESC_SIGNAL
         }
         else {
             gyrosRead(&gyro);
