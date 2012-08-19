@@ -92,7 +92,7 @@ void gyrosCalibrate(void) {
 
 void gyrosReverse(void) {
     struct RX_STATE_S rxState;
-    struct SETTINGS_S settings;
+    struct SETTINGS_S set;
 
     // flash LED 3 times
     for (uint8_t i = 0; i < 3; i++) {
@@ -104,32 +104,32 @@ void gyrosReverse(void) {
 
     while (true) {
         receiverGetChannels(&rxState);
-        settingsRead(&settings);
+        settingsRead(&set);
 
         if (rxState.roll < -STICK_THROW) { // normal(left)
-            settings.RollGyroDirection = GYRO_NORMAL;
-            settingsWrite(&settings);
+            set.RollGyroDirection = GYRO_NORMAL;
+            settingsWrite(&set);
             LED = 1;
         }
         if (rxState.roll > STICK_THROW) { // reverse(right)
-            settings.RollGyroDirection = GYRO_REVERSED;
-            settingsWrite(&settings);
+            set.RollGyroDirection = GYRO_REVERSED;
+            settingsWrite(&set);
             LED = 1;
         } else if (rxState.pitch < -STICK_THROW) { // normal(up)
-            settings.PitchGyroDirection = GYRO_NORMAL;
-            settingsWrite(&settings);
+            set.PitchGyroDirection = GYRO_NORMAL;
+            settingsWrite(&set);
             LED = 1;
         } else if (rxState.pitch > STICK_THROW) { // reverse(down)
-            settings.PitchGyroDirection = GYRO_REVERSED;
-            settingsWrite(&settings);
+            set.PitchGyroDirection = GYRO_REVERSED;
+            settingsWrite(&set);
             LED = 1;
         } else if (rxState.yaw < -STICK_THROW) { // normal(left)
-            settings.YawGyroDirection = GYRO_NORMAL;
-            settingsWrite(&settings);
+            set.YawGyroDirection = GYRO_NORMAL;
+            settingsWrite(&set);
             LED = 1;
         } else if (rxState.yaw > STICK_THROW) { // reverse(right)
-            settings.YawGyroDirection = GYRO_REVERSED;
-            settingsWrite(&settings);
+            set.YawGyroDirection = GYRO_REVERSED;
+            settingsWrite(&set);
             LED = 1;
         }
 

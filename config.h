@@ -42,7 +42,7 @@
 
 /*
  * ESC PPM output rate -
- * Do not set lower than 122 Hz without a slower/higher t0/t1 clkdiv
+ * Do not set lower than 123 Hz without a slower/higher t0/t1 clkdiv
  * as the period needs to fit in the 16-bit timer.
  */
 //#define ESC_RATE 300  // in Hz

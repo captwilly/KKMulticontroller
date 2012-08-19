@@ -161,6 +161,7 @@ CFLAGS += -Wall
 CFLAGS += -Werror
 CFLAGS += -Wextra
 CFLAGS += -Wstrict-prototypes
+CFLAGS += -Wshadow
 #CFLAGS += -mshort-calls
 #CFLAGS += -fno-unit-at-a-time
 #CFLAGS += -Wundef

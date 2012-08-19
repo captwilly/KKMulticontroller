@@ -22,4 +22,10 @@
 
 #define FOREVER     while(true)
 
+#ifdef SERVO_REVERSE
+#define SERVO_REVERSE_SIGN -
+#else
+#define SERVO_REVERSE_SIGN +
+#endif
+
 #endif /* COMMON_H_ */
