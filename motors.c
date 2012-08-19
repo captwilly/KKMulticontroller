@@ -4,6 +4,10 @@
 #include <util/delay.h>
 #include <util/atomic.h>
 
+
+/******************************************************************************
+ ***    Defines                                                             ***
+ ******************************************************************************/
 // 160 CPU tacts for ISR to finish - 2% error
 // TODO: decrease this as much as possible
 #define MIN_DIST    20
@@ -16,6 +20,28 @@
 #error "ESC rate is too low (timer width and prescaler restriction)"
 #endif
 
+// Add one if there is non-zero modulo
+#if (10 * ESC_RATE) / SERVO_RATE == 10 * (ESC_RATE / SERVO_RATE)
+#define SERVO_SKIP  ESC_RATE / SERVO_RATE
+#else
+#define SERVO_SKIP  ESC_RATE / SERVO_RATE + 1
+#endif
+
+#if SERVO_SKIP > 255
+#error "Servo rate is too low"
+#endif
+
+#if defined(SINGLE_COPTER) || defined(TWIN_COPTER) || defined(HEX_COPTER) || defined(Y6_COPTER)
+#define M5_USED 1
+#else
+#define M5_USED 0
+#endif
+#if defined(TWIN_COPTER) || defined(HEX_COPTER) || defined(Y6_COPTER)
+#define M6_USED 1
+#else
+#define M6_USED 0
+#endif
+
 #if M5_USED && M6_USED
 #define MOTOR_COUNT 6
 #elif M5_USED || M6_USED
@@ -24,6 +50,38 @@
 #define MOTOR_COUNT 4
 #endif
 
+#if defined (SINGLE_COPTER) || defined(DUAL_COPTER) || defined(TWIN_COPTER) || defined(TRI_COPTER)\
+    || defined(QUAD_COPTER)
+#define SERVO_PRESENT
+#endif
+
+#if defined(QUAD_COPTER)
+#define MASK_SERVO  (_BV(0) | _BV(2))
+#endif
+
+#if defined(SINGLE_COPTER)
+#define MASK_SERVO  (_BV(1) | _BV(2) | _BV(3) | _BV(4) | _BV(5))
+#endif
+
+#if defined(DUAL_COPTER)
+#define MASK_SERVO  (_BV(2) | _BV(3) | _BV(4) | _BV(5))
+#endif
+
+#if defined(TWIN_COPTER)
+#define MASK_SERVO  (_BV(2) | _BV(3) | _BV(4) | _BV(5))
+#endif
+
+#if defined(TRI_COPTER)
+#define MASK_SERVO  (_BV(3) | _BV(5))
+#endif
+
+#define MASK_ALL    0x3f
+#define MASK_ESC    (~MASK_SERVO & MASK_ALL)
+
+
+/******************************************************************************
+ ***    Module variables                                                    ***
+ ******************************************************************************/
 static struct {
     uint16_t offset;
     uint8_t portb_mask;
@@ -31,63 +89,100 @@ static struct {
 } motors_list[MOTOR_COUNT];
 static uint8_t motor_next;
 
-// TODO: implement Servo skip
-#if defined(SINGLE_COPTER) \
-    || defined(DUAL_COPTER) \
-    || defined(TWIN_COPTER) \
-    || defined(TRI_COPTER)
-uint8_t servo_skip;
-uint16_t servo_skip_divider;
-#endif
-
 static volatile bool motorReady = true;
 
-static void motorWriteAllPins(bool value) {
+
+/******************************************************************************
+ ***    Interrupt service routines                                          ***
+ ******************************************************************************/
+/* WARNING: consider setting appropriate MIN_DIST value when changing following
+ *  ISR handler (that setting is tightly coupled with handler execution time) */
+ISR(TIMER1_COMPA_vect) {
+    // Release needed lines
+    PORTB &= motors_list[motor_next].portb_mask;
+    PORTD &= motors_list[motor_next].portd_mask;
+
+    if (motor_next == 0) {
+        /* Whew, we are done here - disable further interrupts and get some
+         *  rest */
+        TIMSK1 &= ~_BV(OCIE1A);
+        return;
+    }
+
+    // Setup event for that time and exit
+    motor_next--;
+    OCR1A = motors_list[motor_next].offset;
+}
+
+ISR(TIMER1_COMPB_vect) {
+    /* This happens when pause required to care ESC_RATE is finished.
+     *  Indicate readiness for the next cycle and disable further interrupts */
+    TIMSK1 &= ~_BV(OCIE1B);
+    motorReady = true;
+}
+
+
+/******************************************************************************
+ ***    Private functions                                                   ***
+ ******************************************************************************/
+static void motorWriteAllPins(bool value, uint8_t mask) {
     uint8_t portb_mask = 0;
     uint8_t portd_mask = 0;
 
+    if (mask & _BV(0)) {
 #if M1_IS_PORTB
-    portb_mask |= M1;
+        portb_mask |= M1;
 #elif M1_IS_PORTD
-    portd_mask |= M1;
+        portd_mask |= M1;
 #else
 #error "Motor pin location should be either PORTB or PORTC"
 #endif
+    }
+    if (mask & _BV(1)) {
 #if M2_IS_PORTB
-    portb_mask |= M2;
+        portb_mask |= M2;
 #elif M2_IS_PORTD
-    portd_mask |= M2;
+        portd_mask |= M2;
 #else
 #error "Motor pin location should be either PORTB or PORTC"
 #endif
+    }
+    if (mask & _BV(2)) {
 #if M3_IS_PORTB
-    portb_mask |= M3;
+        portb_mask |= M3;
 #elif M3_IS_PORTD
-    portd_mask |= M3;
+        portd_mask |= M3;
 #else
 #error "Motor pin location should be either PORTB or PORTC"
 #endif
+    }
+    if (mask & _BV(3)) {
 #if M4_IS_PORTB
-    portb_mask |= M4;
+        portb_mask |= M4;
 #elif M4_IS_PORTD
-    portd_mask |= M4;
+        portd_mask |= M4;
 #else
 #error "Motor pin location should be either PORTB or PORTC"
 #endif
+    }
+    if (mask & _BV(4)) {
 #if M5_IS_PORTB
-    portb_mask |= M5;
+        portb_mask |= M5;
 #elif M5_IS_PORTD
-    portd_mask |= M5;
+        portd_mask |= M5;
 #else
 #error "Motor pin location should be either PORTB or PORTC"
 #endif
+    }
+    if (mask & _BV(5)) {
 #if M6_IS_PORTB
-    portb_mask |= M6;
+        portb_mask |= M6;
 #elif M6_IS_PORTD
-    portd_mask |= M6;
+        portd_mask |= M6;
 #else
 #error "Motor pin location should be either PORTB or PORTC"
 #endif
+    }
 
     if (value) {
         PORTB |= portb_mask;
@@ -160,6 +255,10 @@ static uint8_t motorGetPordMask(uint8_t mtr_num){
     }
 }
 
+
+/******************************************************************************
+ ***    Public functions                                                    ***
+ ******************************************************************************/
 void motorsSetup() {
     M1_DIR = OUTPUT;
     M2_DIR = OUTPUT;
@@ -168,29 +267,10 @@ void motorsSetup() {
     M5_DIR = OUTPUT;
     M6_DIR = OUTPUT;
 
-    motorWriteAllPins(false);
+    motorWriteAllPins(false, MASK_ALL);
 
-
-    /*
-     * timer0 (8bit) - run at 8MHz, used to control ESC pulses
-     * We use 8Mhz instead of 1MHz (1 usec) to avoid alignment jitter.
-     */
+    // TODO: remove this (make sure timer is not used anywhere)
     TCCR0B = _BV(CS00); /* NOTE: Specified again below with FOC0x bits */
-
-#if defined(SINGLE_COPTER) \
-    || defined(DUAL_COPTER) \
-    || defined(TWIN_COPTER) \
-    || defined(TRI_COPTER)
-    /*
-     * Calculate the servo rate divider (pulse loop skip count
-     * needed to avoid burning analog servos)
-     */
-    for(servo_skip_divider = 1;;servo_skip_divider++) {
-        if(servo_skip_divider * SERVO_RATE >= ESC_RATE) {
-            break;
-        }
-    }
-#endif
 }
 
 void motorOutputPPM(struct MT_STATE_S *state){
@@ -345,9 +425,20 @@ void motorOutputPPM(struct MT_STATE_S *state){
     // Point to the last item in motors_list
     motor_next -= 1;
 
-
     // Start outputting signal
-    motorWriteAllPins(true);
+    // TODO: remove unneeded outputs from 'motors_list'
+#ifdef SERVO_PRESENT
+    // Need to skip some outputs due to lower servo rate
+    static uint8_t servo_skip = SERVO_SKIP;
+    if (--servo_skip == 0) {
+        servo_skip = SERVO_SKIP;
+        motorWriteAllPins(true, MASK_ALL);
+    } else {
+        motorWriteAllPins(true, MASK_ESC);
+    }
+#else
+    motorWriteAllPins(true, MASK_ALL);
+#endif
 
     /* Remember current counter value to base compare further compare events on
      *  it */
@@ -398,33 +489,6 @@ void motorOutputPPM(struct MT_STATE_S *state){
     }
     // Enable interrupts processing
     TIMSK1 |= _BV(OCIE1A) | _BV(OCIE1B);
-}
-
-
-/* WARNING: consider setting appropriate MIN_DIST value when changing following
- *  ISR handler (that setting is tightly coupled with handler execution time) */
-ISR(TIMER1_COMPA_vect) {
-    // Release needed lines
-    PORTB &= motors_list[motor_next].portb_mask;
-    PORTD &= motors_list[motor_next].portd_mask;
-
-    if (motor_next == 0) {
-        /* Whew, we are done here - disable further interrupts and get some
-         *  rest */
-        TIMSK1 &= ~_BV(OCIE1A);
-        return;
-    }
-
-    // Setup event for that time and exit
-    motor_next--;
-    OCR1A = motors_list[motor_next].offset;
-}
-
-ISR(TIMER1_COMPB_vect) {
-    /* This happens when pause required to care ESC_RATE is finished.
-     *  Indicate readiness for the next cycle and disable further interrupts */
-    TIMSK1 &= ~_BV(OCIE1B);
-    motorReady = true;
 }
 
 void motorsIdentify() {

@@ -2,7 +2,6 @@
 #define COMMON_H_
 
 #include <avr/io.h>
-#include <avr/eeprom.h>
 #include "typedefs.h"
 #include "io_cfg.h"
 #include "config.h"
@@ -23,9 +22,10 @@
 
 #define FOREVER     while(true)
 
-#define DEBUG(x)	{														\
-        eeprom_write_block(&x, (void*)512, sizeof(x));                      \
-        FOREVER{}                                                           \
-    }
+#ifdef SERVO_REVERSE
+#define SERVO_REVERSE_SIGN -
+#else
+#define SERVO_REVERSE_SIGN +
+#endif
 
 #endif /* COMMON_H_ */

@@ -276,15 +276,15 @@ static inline void main_loop() {
             motors.m1out += rxState.roll;
             motors.m2out -= rxState.roll;
 
-            motors.m3out -= SERVO_REVERSE rxState.pitch;
-            motors.m4out += SERVO_REVERSE rxState.pitch;
+            motors.m3out -= SERVO_REVERSE_SIGN rxState.pitch;
+            motors.m4out += SERVO_REVERSE_SIGN rxState.pitch;
             // Stick Only, Optional
             rxState.orgPitch = abs(rxState.orgPitch);
             motors.m5out += rxState.orgPitch; // Tain Servo-Optional, Down Only
             motors.m6out -= rxState.orgPitch; // Tain Servo-Optional, Down Only (Reverse)
 
-            motors.m3out += SERVO_REVERSE(rxState.yaw >> 1);
-            motors.m4out += SERVO_REVERSE(rxState.yaw >> 1);
+            motors.m3out += SERVO_REVERSE_SIGN(rxState.yaw >> 1);
+            motors.m4out += SERVO_REVERSE_SIGN(rxState.yaw >> 1);
 #elif defined(TRI_COPTER)
             motors.m1out = rxState.collective;
             motors.m2out = rxState.collective;
@@ -300,7 +300,7 @@ static inline void main_loop() {
             motors.m1out += rxState.pitch;
             motors.m2out += rxState.pitch;
 
-            motors.m4out += SERVO_REVERSE rxState.yaw;
+            motors.m4out += SERVO_REVERSE_SIGN rxState.yaw;
 #elif defined(QUAD_COPTER)
             motors.m1out = rxState.collective;
             motors.m2out = rxState.collective;
