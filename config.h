@@ -67,7 +67,7 @@
 // Lowest value at which motor is still rotating
 #define MOTOR_LOWEST_VALUE  200
 
-// Define if you want your ESC to beep in
+// Define if don't you want your ESC to beep in not armed mode
 //#define NOT_ARMED_ESC_SIGNAL
 
 
