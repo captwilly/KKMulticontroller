@@ -5,6 +5,7 @@
 #include "receiver.h"
 #include "motors.h"
 #include "led.h"
+#include "timer.h"
 #include <stdlib.h>
 #include <util/delay.h>
 #include <avr/interrupt.h>
@@ -31,21 +32,10 @@ static void setup() {
     LED_INIT();
     LED_OFF();
 
+    timerInit();
     receiverSetup();
     gyrosSetup();
     motorsSetup();
-
-    /*
-     * This suits my ATmega88A: no Tx trim, output timings perfect.
-     * See doc8271.pdf page ~401; beware the step at 128. -Simon
-     */
-    if (OSCCAL == 0x9d)
-        OSCCAL = 0x9f;
-
-    /*
-     * timer2 8bit - run at 8MHz / 1024 = 7812.5KHz, just used for arming
-     */
-    TCCR2B = _BV(CS22) | _BV(CS21) | _BV(CS20);
 
     /*
      * Flash the LED once at power on

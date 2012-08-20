@@ -66,11 +66,6 @@ void receiverSetup() {
     RX_YAW =        0;
 
     /*
-     * timer1 (16bit) - run at 8MHz (prescaler 1), used to measure Rx pulses
-     * and to control ESC/servo pulse
-     */TCCR1B = _BV(CS10);
-
-    /*
      * Enable Rx pin interrupts
      */
     PCICR = _BV(PCIE0) | _BV(PCIE2); // PCINT0..7, PCINT16..23 enable

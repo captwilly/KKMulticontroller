@@ -275,9 +275,6 @@ void motorsSetup() {
 #endif
 
     motorWriteAllPins(false, MASK_ALL);
-
-    // TODO: remove this (make sure timer is not used anywhere)
-    TCCR0B = _BV(CS00); /* NOTE: Specified again below with FOC0x bits */
 }
 
 void motorOutputPPM(struct MT_STATE_S *state){
