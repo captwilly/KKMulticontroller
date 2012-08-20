@@ -58,24 +58,37 @@
 #define M3_IS_PORTD         0
 #define M4_IS_PORTB         0
 #define M4_IS_PORTD         1
+#ifndef ATTITUDE_SENSOR
 #define M5_IS_PORTB         0
 #define M5_IS_PORTD         1
 #define M6_IS_PORTB         0
 #define M6_IS_PORTD         1
+#endif
 #define M1                  _BV(2)
 #define M2                  _BV(1)
 #define M3                  _BV(0)
 #define M4                  _BV(7)
+#ifndef ATTITUDE_SENSOR
 #define M5                  _BV(6)
 #define M6                  _BV(5)
+#endif
 #define M1_DIR              REGISTER_BIT(DDRB,2)
 #define M2_DIR              REGISTER_BIT(DDRB,1)
 #define M3_DIR              REGISTER_BIT(DDRB,0)
 #define M4_DIR              REGISTER_BIT(DDRD,7)
+#ifndef ATTITUDE_SENSOR
 #define M5_DIR              REGISTER_BIT(DDRD,6)
 #define M6_DIR              REGISTER_BIT(DDRD,5)
+#endif
 
 #define LED                 REGISTER_BIT(PORTB,6)
 #define LED_DIR             REGISTER_BIT(DDRB,6)
+
+#ifdef ATTITUDE_SENSOR
+#define ATT_TRIG            REGISTER_BIT(PORTD, 6)
+#define ATT_ECHO            REGISTER_BIT(PIND, 5)
+#define ATT_TRIG_DIR        REGISTER_BIT(DDRD, 6)
+#define ATT_ECHO_DIR        REGISTER_BIT(DDRD, 5)
+#endif
 
 #endif //IO_CFG_H

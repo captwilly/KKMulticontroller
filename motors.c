@@ -210,6 +210,7 @@ static uint8_t motorGetPorbMask(uint8_t mtr_num){
     case 3:
         return M4;
 #endif
+#ifndef ATTITUDE_SENSOR
 #if M5_IS_PORTB
     case 4:
         return M5;
@@ -218,6 +219,7 @@ static uint8_t motorGetPorbMask(uint8_t mtr_num){
     case 5:
         return M6;
 #endif
+#endif // ATTITUDE_SENSOR
     default:
         return 0;
     }
@@ -241,6 +243,7 @@ static uint8_t motorGetPordMask(uint8_t mtr_num){
     case 3:
         return M4;
 #endif
+#ifndef ATTITUDE_SENSOR
 #if M5_IS_PORTD
     case 4:
         return M5;
@@ -249,6 +252,7 @@ static uint8_t motorGetPordMask(uint8_t mtr_num){
     case 5:
         return M6;
 #endif
+#endif // ATTITUDE_SENSOR
     default:
         return 0;
     }

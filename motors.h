@@ -20,6 +20,9 @@
 #define M6_USED 0
 #endif
 
+#if defined(ATTITUDE_SENSOR) && (M5_USED || M6_USED)
+#error "Your copter configuration require M5 and/or M6. Attitude sensor is not supported"
+#endif
 
 /******************************************************************************
  ***    Types                                                               ***

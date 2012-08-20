@@ -9,6 +9,7 @@
 #include <util/delay.h>
 #include <avr/interrupt.h>
 #include <string.h>
+#include <util/atomic.h>
 
 
 FUSES = {
@@ -136,6 +137,50 @@ static inline void main_loop() {
     struct GYRO_STATE_S gyro;
     struct GYRO_STATE_S integral = {.yaw = 0};   // PID integral term
     struct GYRO_STATE_S last_error = {.yaw = 0}; // Last proportional error
+
+#ifdef ATTITUDE_SENSOR
+    // Attitude start
+
+    ATT_TRIG_DIR = OUTPUT;
+    ATT_ECHO_DIR = INPUT;
+
+    FOREVER {
+
+        ATT_TRIG = 1;
+        _delay_us(10);
+        ATT_TRIG = 0;
+
+        while (!ATT_ECHO);
+
+        uint16_t meas;
+        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+            meas = TCNT1;
+        }
+
+        while (ATT_ECHO);
+
+        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+            meas = TCNT1 - meas;
+        }
+
+
+        meas -= 80;
+
+    // 340290 (speed of sound in mm/s) / F_CPU (timer1 clock)
+#define SOUND_SPEED_FACTOR 0.04253625
+
+        meas = meas * SOUND_SPEED_FACTOR / 2;
+
+        if(meas > 100) {
+            LED_ON();
+        } else {
+            LED_OFF();
+        }
+        motorOutputPPM(&motors);
+    }
+
+    // Attitude end
+#endif //#ifdef ATTITUDE_SENSOR ATTITUDE_SENSOR
 
     FOREVER {
 
