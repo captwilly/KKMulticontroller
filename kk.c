@@ -17,7 +17,7 @@ FUSES = {
         .low = FUSE_SUT0 & FUSE_CKSEL3 & FUSE_CKSEL2 & FUSE_CKSEL0,     // 0xE2
         .high = FUSE_SPIEN & FUSE_EESAVE & FUSE_BOOTRST,                // 0xD6
         .extended = FUSE_BODLEVEL2 & FUSE_BODLEVEL1,                    // 0x04
-#elif defined(__AVR_ATmega168A__)
+#elif defined(__AVR_ATmega168P__)
         .low = FUSE_SUT0 & FUSE_CKSEL3 & FUSE_CKSEL2 & FUSE_CKSEL0,     // 0xE2
         .high = FUSE_SPIEN & FUSE_EESAVE & FUSE_BODLEVEL0 & FUSE_BODLEVEL1, // 0xD4
         .extended = EFUSE_DEFAULT,                                      // 0xF9
@@ -141,6 +141,8 @@ static inline void main_loop() {
     ATT_TRIG_DIR = OUTPUT;
     ATT_ECHO_DIR = INPUT;
 
+//    LED_BLINK_FOREVER(4000);
+
     FOREVER {
 
         ATT_TRIG = 1;
@@ -149,18 +151,11 @@ static inline void main_loop() {
 
         while (!ATT_ECHO);
 
-        uint16_t meas;
-        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-            meas = TCNT1;
-        }
+        uint32_t meas = timerGetTime();
 
         while (ATT_ECHO);
 
-        ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-            meas = TCNT1 - meas;
-        }
-
-
+        meas = timerGetTime() - meas;
         meas -= 80;
 
     // 340290 (speed of sound in mm/s) / F_CPU (timer1 clock)

@@ -41,7 +41,7 @@
 
 
 # MCU name
-MCU = atmega168a
+MCU = atmega168p
 
 
 # Processor frequency.

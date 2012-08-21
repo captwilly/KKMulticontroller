@@ -9,7 +9,7 @@
 #include <avr/interrupt.h>
 #include <util/atomic.h>
 
-//static uint8_t timer1_msb = 0;
+static uint8_t timer1_msb = 0;
 
 void timerInit(void){
     // TODO: remove timer0 initialization (make sure timer is not used anywhere)
@@ -37,21 +37,21 @@ void timerInit(void){
 #endif
 }
 
-//ISR(TIMER1_OVF_vect) {
-//    timer1_msb++;
-//}
+ISR(TIMER1_OVF_vect) {
+    timer1_msb++;
+}
 
-//uint32_t timerGetTime(void) {
-//    uint16_t tcnt1;
-//    uint8_t msb;
-//
-//    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-//        tcnt1 = TCNT1;
-//        if((TIFR1 & _BV(TOV1)) && tcnt1 < T1_FREQ * 20 / F_CPU) {
-//            msb = timer1_msb + 1;
-//        } else {
-//            msb = timer1_msb;
-//        }
-//    }
-//    return tcnt1 + ((uint32_t)msb << 16);
-//}
+uint32_t timerGetTime(void) {
+    uint16_t tcnt1;
+    uint8_t msb;
+
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+        tcnt1 = TCNT1;
+        if((TIFR1 & _BV(TOV1)) && tcnt1 < T1_FREQ * 20 / F_CPU) {
+            msb = timer1_msb + 1;
+        } else {
+            msb = timer1_msb;
+        }
+    }
+    return tcnt1 + ((uint32_t)msb << 16);
+}
