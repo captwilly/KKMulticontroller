@@ -10,11 +10,18 @@
 #include <avr/interrupt.h>
 #include <string.h>
 
-
 FUSES = {
-        .low = FUSE_SUT0 & FUSE_CKSEL3 & FUSE_CKSEL2 & FUSE_CKSEL0, // 0xE2
-        .high = FUSE_SPIEN & FUSE_EESAVE & FUSE_BOOTRST,            // 0xd6
-        .extended = FUSE_BODLEVEL2 & FUSE_BODLEVEL1,                // 0x04
+#if defined(__AVR_ATmega328P__)
+        .low = FUSE_SUT0 & FUSE_CKSEL3 & FUSE_CKSEL2 & FUSE_CKSEL0,     // 0xE2
+        .high = FUSE_SPIEN & FUSE_EESAVE & FUSE_BOOTRST,                // 0xD6
+        .extended = FUSE_BODLEVEL2 & FUSE_BODLEVEL1,                    // 0x04
+#elif defined(__AVR_ATmega168A__)
+        .low = FUSE_SUT0 & FUSE_CKSEL3 & FUSE_CKSEL2 & FUSE_CKSEL0,     // 0xE2
+        .high = FUSE_SPIEN & FUSE_EESAVE & FUSE_BODLEVEL0 & FUSE_BODLEVEL1, // 0xD4
+        .extended = EFUSE_DEFAULT,                                      // 0xF9
+#else
+#error "Unsupported processor core"
+#endif
 }; // beware that these are not programmed automatically
 
 
