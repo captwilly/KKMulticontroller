@@ -6,6 +6,7 @@
 /*** BEGIN TYPES ***/
 // Settings structure
 struct SETTINGS_S {
+    // TODO: split to separate structures - one per module which uses settings
     uint8_t Version;
 
     uint8_t RollGyroDirection;

@@ -18,6 +18,8 @@
 #define LED_INVERT()    LED = ~LED
 #define LED_WRITE(val)  LED = (bool)val
 
+/* TODO: add uniform interface which indicates errors (infinite loop with LED
+ *  pattern corresponding to error type) and actions performed */
 #define LED_BLINK(period, count)    {                                       \
     uint16_t cnt = count;                                                   \
     while (cnt-- > 0) {                                                     \

@@ -103,6 +103,8 @@ void settingsRead(struct SETTINGS_S *settings) {
     } else {
         uint16_t crc_calc = settingsCalcCRC(settings);
         // In case CRC is bad, reset to defaults
+        /* TODO: indicate error if CRC is bad to detect EEPROM corruption and
+         *  surprise reset to defaults */
         if (crc_calc != crc_stored) {
             settingsSetDefaults();
             eeprom_read_block(settings, &default_settings.settings,
