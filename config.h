@@ -70,9 +70,7 @@
 // Define if you don't want your ESC to beep in not armed mode
 //#define NOT_ARMED_ESC_SIGNAL
 
-#ifdef QUAD_COPTER
 // Use HS-SR04 ultrasonic attitude sensor
-#define ATTITUDE_SENSOR
-#endif
+//#define ATTITUDE_SENSOR
 
 #endif /* CONFIG_H_ */

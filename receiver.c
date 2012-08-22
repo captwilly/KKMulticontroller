@@ -175,6 +175,7 @@ void receiverStickCenterAutomatic(void) {
     receiverGetChannelsClean(&rx);
 
     // This will be final value for zero offset
+    // TODO: get average of couple readings
     settings.RxRollZero = rx.roll;
     settings.RxPitchZero = rx.pitch;
     settings.RxYawZero = rx.yaw;

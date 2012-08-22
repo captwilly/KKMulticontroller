@@ -11,9 +11,6 @@
 #include <util/delay.h>
 #include <avr/interrupt.h>
 #include <string.h>
-#include <util/atomic.h>
-
-#include "debug.h"
 
 FUSES = {
 #if defined(__AVR_ATmega328P__)
@@ -46,6 +43,9 @@ static void setup() {
     receiverSetup();
     gyrosSetup();
     motorsSetup();
+#ifdef ATTITUDE_SENSOR
+    attInit();
+#endif
 
     /*
      * Flash the LED once at power on
@@ -138,35 +138,6 @@ static inline void main_loop() {
     struct GYRO_STATE_S integral = {.yaw = 0};   // PID integral term
     struct GYRO_STATE_S last_error = {.yaw = 0}; // Last proportional error
 
-#ifdef ATTITUDE_SENSOR
-    // Attitude start
-
-    ATT_TRIG_DIR = OUTPUT;
-    ATT_ECHO_DIR = INPUT;
-
-//    LED_BLINK_FOREVER(4000);
-
-    FOREVER {
-
-        ATT_TRIG = 1;
-        _delay_us(10);
-        ATT_TRIG = 0;
-
-        _delay_ms(20);
-
-        uint16_t dist = attGetDistance();
-
-        if(dist > 100) {
-            LED_ON();
-        } else {
-            LED_OFF();
-        }
-        motorOutputPPM(&motors);
-    }
-
-    // Attitude end
-#endif //#ifdef ATTITUDE_SENSOR ATTITUDE_SENSOR
-
     FOREVER {
 
         LED_WRITE(Armed);
@@ -226,6 +197,28 @@ static inline void main_loop() {
         else {
             gyrosRead(&gyro);
             gyrosReadGainPots(&pots);
+
+#ifdef ATTITUDE_SENSOR
+            // Get Attitude
+            
+            static uint8_t att_skip = 0;
+            // Attitude in millimeters
+            static uint16_t attitude = 0;
+            // and it's derivative
+            static int16_t attitude_diff = 0;
+
+            /* Attitude sensor work frequency is lower than ESC frequency
+             *  so skip couple iterations here */
+            if(att_skip++ == ESC_RATE / ATT_RATE){
+                att_skip = 0;
+
+                uint16_t attitude_curr = attGetDistance();
+                attitude_diff = attitude_curr - attitude;
+                attitude = attitude_curr;
+                // Trig next measurement
+                attTrigger();
+            }
+#endif
 
             // Start mixing
 
@@ -339,10 +332,19 @@ static inline void main_loop() {
 
             motors.m4out += SERVO_REVERSE_SIGN rxState.yaw;
 #elif defined(QUAD_COPTER)
+
+#ifdef ATTITUDE_SENSOR
+			// Apply attitde correction
+            motors.m1out = 1000 - attitude - 4 * attitude_diff;
+            motors.m2out = 1000 - attitude - 4 * attitude_diff;
+            motors.m3out = 1000 - attitude - 4 * attitude_diff;
+            motors.m4out = 1000 - attitude - 4 * attitude_diff;
+#else
             motors.m1out = rxState.collective;
             motors.m2out = rxState.collective;
             motors.m3out = rxState.collective;
             motors.m4out = rxState.collective;
+#endif
 
             motors.m2out += rxState.roll;
             motors.m3out -= rxState.roll;
