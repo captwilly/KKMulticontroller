@@ -17,5 +17,6 @@
 
 void timerInit(void);
 uint32_t timerGetTime(void);
+uint32_t timerGetTimeUnsafe(void);
 
 #endif /* TIMER_H_ */

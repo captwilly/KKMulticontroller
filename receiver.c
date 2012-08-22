@@ -2,6 +2,7 @@
 
 #include "settings.h"
 #include "led.h"
+#include "att_sensor.h"
 #include <stdlib.h>
 #include <util/atomic.h>
 #include <util/delay.h>
@@ -19,11 +20,29 @@ static struct SETTINGS_S settings;
 // NOTE: we can save average 4 tacts rewriting those in assembly
 ISR(PCINT2_vect) {
     static volatile uint16_t RxChannel1Start;
-    if (RX_ROLL) { // rising
-        RxChannel1Start = TCNT1;
-    } else { // falling
-        RxChannel1 = TCNT1 - RxChannel1Start;
+#ifdef ATTITUDE_SENSOR
+    static bool prev_roll;
+    static bool prev_echo;
+
+    bool new_roll = RX_ROLL;
+    if (new_roll != prev_roll) {
+        prev_roll = new_roll;
+        if (new_roll) { // rising
+#else
+        if (RX_ROLL) { // rising
+#endif
+            RxChannel1Start = TCNT1;
+        } else { // falling
+            RxChannel1 = TCNT1 - RxChannel1Start;
+        }
+#ifdef ATTITUDE_SENSOR
     }
+    bool new_echo = ATT_ECHO;
+    if(new_echo != prev_echo) {
+        prev_echo = new_echo;
+        attISR(new_echo);
+    }
+#endif
 }
 
 ISR(INT0_vect) {
@@ -71,6 +90,11 @@ void receiverSetup() {
     PCICR = _BV(PCIE0) | _BV(PCIE2); // PCINT0..7, PCINT16..23 enable
     PCMSK0 = _BV(PCINT7); // PB7
     PCMSK2 = _BV(PCINT17); // PD1
+
+#ifdef ATTITUDE_SENSOR
+    PCMSK2 |= _BV(PCINT21); // PD5
+#endif
+
     EICRA = _BV(ISC00) | _BV(ISC10); // Any change INT0, INT1
     EIMSK = _BV(INT0) | _BV(INT1); // External Interrupt Mask Register
 

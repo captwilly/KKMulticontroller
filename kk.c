@@ -6,11 +6,14 @@
 #include "motors.h"
 #include "led.h"
 #include "timer.h"
+#include "att_sensor.h"
 #include <stdlib.h>
 #include <util/delay.h>
 #include <avr/interrupt.h>
 #include <string.h>
 #include <util/atomic.h>
+
+#include "debug.h"
 
 FUSES = {
 #if defined(__AVR_ATmega328P__)
@@ -149,21 +152,11 @@ static inline void main_loop() {
         _delay_us(10);
         ATT_TRIG = 0;
 
-        while (!ATT_ECHO);
+        _delay_ms(20);
 
-        uint32_t meas = timerGetTime();
+        uint16_t dist = attGetDistance();
 
-        while (ATT_ECHO);
-
-        meas = timerGetTime() - meas;
-        meas -= 80;
-
-    // 340290 (speed of sound in mm/s) / F_CPU (timer1 clock)
-#define SOUND_SPEED_FACTOR 0.04253625
-
-        meas = meas * SOUND_SPEED_FACTOR / 2;
-
-        if(meas > 100) {
+        if(dist > 100) {
             LED_ON();
         } else {
             LED_OFF();
