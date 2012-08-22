@@ -11,7 +11,7 @@
 #include <avr/eeprom.h>
 
 
-#define DEBUG_INFO_EEP_POSITION 512
+#define DEBUG_INFO_EEP_POSITION 256
 
 #define DEBUG(x) {                                                          \
         eeprom_write_block(&x, (void*)DEBUG_INFO_EEP_POSITION, sizeof(x));  \

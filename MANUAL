@@ -17,7 +17,7 @@ General motor output setup:
              M5 ---- ---- M3
             (Servo) | (Servo)
                     |
-                    M6/M4 (Servo)
+                    M4 (Servo)
         
     Dual
                     M1 CCW
@@ -27,10 +27,10 @@ General motor output setup:
         
                     |
                     |
-          M5/M3 ----+----
+             M3 ----+----
             (Servo) |
                     |
-                 M6/M4 (Servo)
+                 M4 (Servo)
         
     Twin
                  / --- \
@@ -51,8 +51,8 @@ General motor output setup:
                   |   |
                   `---'
                     |
-                    |M4/M6 (Tail Servo)
-                    M3/M5 CCW
+                    |M4 (Tail Servo)
+                    M3 CCW
         
     Quad-+
                    M1 CW
@@ -60,12 +60,12 @@ General motor output setup:
                     |
                     |
                   .---.
-        M2 CCW----|   |----M3/M5 CCW
+        M2 CCW----|   |----M3 CCW
                   `---'
                     |
                     |
                     |
-                  M4/M6 CW
+                  M4 CW
         
     Quad-X
         
@@ -75,7 +75,7 @@ General motor output setup:
                    |  |
                   /`--'\
                 /        \
-            M4/M6 CCW   M3/M5 CW
+            M4 CCW   M3 CW
         
     Hex
                     M1 CW

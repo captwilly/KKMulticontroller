@@ -3,8 +3,8 @@
 
 #include <avr/io.h>
 #include "typedefs.h"
-#include "io_cfg.h"
 #include "config.h"
+#include "io_cfg.h"
 
 
 // Safe MAX and MIN macro implementation got from:

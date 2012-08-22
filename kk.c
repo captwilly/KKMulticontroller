@@ -5,6 +5,8 @@
 #include "receiver.h"
 #include "motors.h"
 #include "led.h"
+#include "timer.h"
+#include "att_sensor.h"
 #include <stdlib.h>
 #include <util/delay.h>
 #include <avr/interrupt.h>
@@ -15,7 +17,7 @@ FUSES = {
         .low = FUSE_SUT0 & FUSE_CKSEL3 & FUSE_CKSEL2 & FUSE_CKSEL0,     // 0xE2
         .high = FUSE_SPIEN & FUSE_EESAVE & FUSE_BOOTRST,                // 0xD6
         .extended = FUSE_BODLEVEL2 & FUSE_BODLEVEL1,                    // 0x04
-#elif defined(__AVR_ATmega168A__)
+#elif defined(__AVR_ATmega168P__)
         .low = FUSE_SUT0 & FUSE_CKSEL3 & FUSE_CKSEL2 & FUSE_CKSEL0,     // 0xE2
         .high = FUSE_SPIEN & FUSE_EESAVE & FUSE_BODLEVEL0 & FUSE_BODLEVEL1, // 0xD4
         .extended = EFUSE_DEFAULT,                                      // 0xF9
@@ -37,21 +39,13 @@ static void setup() {
     LED_INIT();
     LED_OFF();
 
+    timerInit();
     receiverSetup();
     gyrosSetup();
     motorsSetup();
-
-    /*
-     * This suits my ATmega88A: no Tx trim, output timings perfect.
-     * See doc8271.pdf page ~401; beware the step at 128. -Simon
-     */
-    if (OSCCAL == 0x9d)
-        OSCCAL = 0x9f;
-
-    /*
-     * timer2 8bit - run at 8MHz / 1024 = 7812.5KHz, just used for arming
-     */
-    TCCR2B = _BV(CS22) | _BV(CS21) | _BV(CS20);
+#ifdef ATTITUDE_SENSOR
+    attInit();
+#endif
 
     /*
      * Flash the LED once at power on
@@ -204,6 +198,28 @@ static inline void main_loop() {
             gyrosRead(&gyro);
             gyrosReadGainPots(&pots);
 
+#ifdef ATTITUDE_SENSOR
+            // Get Attitude
+            
+            static uint8_t att_skip = 0;
+            // Attitude in millimeters
+            static uint16_t attitude = 0;
+            // and it's derivative
+            static int16_t attitude_diff = 0;
+
+            /* Attitude sensor work frequency is lower than ESC frequency
+             *  so skip couple iterations here */
+            if(att_skip++ == ESC_RATE / ATT_RATE){
+                att_skip = 0;
+
+                uint16_t attitude_curr = attGetDistance();
+                attitude_diff = attitude_curr - attitude;
+                attitude = attitude_curr;
+                // Trig next measurement
+                attTrigger();
+            }
+#endif
+
             // Start mixing
 
             imax = MAX(rxState.collective, 0);
@@ -316,10 +332,19 @@ static inline void main_loop() {
 
             motors.m4out += SERVO_REVERSE_SIGN rxState.yaw;
 #elif defined(QUAD_COPTER)
+
+#ifdef ATTITUDE_SENSOR
+			// Apply attitde correction
+            motors.m1out = 1000 - attitude - 4 * attitude_diff;
+            motors.m2out = 1000 - attitude - 4 * attitude_diff;
+            motors.m3out = 1000 - attitude - 4 * attitude_diff;
+            motors.m4out = 1000 - attitude - 4 * attitude_diff;
+#else
             motors.m1out = rxState.collective;
             motors.m2out = rxState.collective;
             motors.m3out = rxState.collective;
             motors.m4out = rxState.collective;
+#endif
 
             motors.m2out += rxState.roll;
             motors.m3out -= rxState.roll;

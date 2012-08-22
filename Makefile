@@ -41,7 +41,7 @@
 
 
 # MCU name
-MCU = atmega168a
+MCU = atmega168p
 
 
 # Processor frequency.
@@ -80,7 +80,7 @@ OBJDIR = ./build
 
 
 # List C source files here. (C dependencies are automatically generated.)
-SRC = $(TARGET).c motors.c gyros.c receiver.c settings.c adc.c
+SRC = $(TARGET).c motors.c gyros.c receiver.c settings.c adc.c timer.c att_sensor.c
 
 
 # List C++ source files here. (C dependencies are automatically generated.)

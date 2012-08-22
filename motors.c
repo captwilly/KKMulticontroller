@@ -32,24 +32,16 @@
 #error "Servo rate is too low"
 #endif
 
-#if M5_USED && M6_USED
-#define MOTOR_COUNT 6
-#elif M5_USED || M6_USED
-#define MOTOR_COUNT 5
-#else
-#define MOTOR_COUNT 4
-#endif
-
 #if defined (SINGLE_COPTER) || defined(DUAL_COPTER) || defined(TWIN_COPTER) || defined(TRI_COPTER)
 #define SERVO_PRESENT
 #endif
 
 #if defined(SINGLE_COPTER)
-#define MASK_SERVO  (_BV(1) | _BV(2) | _BV(3) | _BV(4) | _BV(5))
+#define MASK_SERVO  (_BV(1) | _BV(2) | _BV(3) | _BV(4))
 #endif
 
 #if defined(DUAL_COPTER)
-#define MASK_SERVO  (_BV(2) | _BV(3) | _BV(4) | _BV(5))
+#define MASK_SERVO  (_BV(2) | _BV(3) | _BV(4))
 #endif
 
 #if defined(TWIN_COPTER)
@@ -57,10 +49,23 @@
 #endif
 
 #if defined(TRI_COPTER)
-#define MASK_SERVO  (_BV(3) | _BV(5))
+#define MASK_SERVO  _BV(3)
 #endif
 
+#if M5_USED && M6_USED
+#define MOTOR_COUNT 6
 #define MASK_ALL    0x3f
+#elif M5_USED
+#define MOTOR_COUNT 5
+#define MASK_ALL    0x1f
+#elif M6_USED
+#define MOTOR_COUNT 5
+#define MASK_ALL    0x2f
+#else
+#define MOTOR_COUNT 4
+#define MASK_ALL    0x0f
+#endif
+
 #define MASK_ESC    (~MASK_SERVO & MASK_ALL)
 
 
@@ -123,6 +128,7 @@ static void motorWriteAllPins(bool value, uint8_t mask) {
 #error "Motor pin location should be either PORTB or PORTC"
 #endif
     }
+
     if (mask & _BV(1)) {
 #if M2_IS_PORTB
         portb_mask |= M2;
@@ -132,6 +138,7 @@ static void motorWriteAllPins(bool value, uint8_t mask) {
 #error "Motor pin location should be either PORTB or PORTC"
 #endif
     }
+
     if (mask & _BV(2)) {
 #if M3_IS_PORTB
         portb_mask |= M3;
@@ -141,6 +148,7 @@ static void motorWriteAllPins(bool value, uint8_t mask) {
 #error "Motor pin location should be either PORTB or PORTC"
 #endif
     }
+
     if (mask & _BV(3)) {
 #if M4_IS_PORTB
         portb_mask |= M4;
@@ -150,6 +158,8 @@ static void motorWriteAllPins(bool value, uint8_t mask) {
 #error "Motor pin location should be either PORTB or PORTC"
 #endif
     }
+
+#if M5_USED
     if (mask & _BV(4)) {
 #if M5_IS_PORTB
         portb_mask |= M5;
@@ -159,6 +169,9 @@ static void motorWriteAllPins(bool value, uint8_t mask) {
 #error "Motor pin location should be either PORTB or PORTC"
 #endif
     }
+#endif // M5_USED
+
+#if M6_USED
     if (mask & _BV(5)) {
 #if M6_IS_PORTB
         portb_mask |= M6;
@@ -168,6 +181,7 @@ static void motorWriteAllPins(bool value, uint8_t mask) {
 #error "Motor pin location should be either PORTB or PORTC"
 #endif
     }
+#endif // M6_USED
 
     if (value) {
         PORTB |= portb_mask;
@@ -196,6 +210,7 @@ static uint8_t motorGetPorbMask(uint8_t mtr_num){
     case 3:
         return M4;
 #endif
+#ifndef ATTITUDE_SENSOR
 #if M5_IS_PORTB
     case 4:
         return M5;
@@ -204,6 +219,7 @@ static uint8_t motorGetPorbMask(uint8_t mtr_num){
     case 5:
         return M6;
 #endif
+#endif // ATTITUDE_SENSOR
     default:
         return 0;
     }
@@ -227,6 +243,7 @@ static uint8_t motorGetPordMask(uint8_t mtr_num){
     case 3:
         return M4;
 #endif
+#ifndef ATTITUDE_SENSOR
 #if M5_IS_PORTD
     case 4:
         return M5;
@@ -235,6 +252,7 @@ static uint8_t motorGetPordMask(uint8_t mtr_num){
     case 5:
         return M6;
 #endif
+#endif // ATTITUDE_SENSOR
     default:
         return 0;
     }
@@ -249,13 +267,14 @@ void motorsSetup() {
     M2_DIR = OUTPUT;
     M3_DIR = OUTPUT;
     M4_DIR = OUTPUT;
+#if M5_USED
     M5_DIR = OUTPUT;
+#endif
+#if M6_USED
     M6_DIR = OUTPUT;
+#endif
 
     motorWriteAllPins(false, MASK_ALL);
-
-    // TODO: remove this (make sure timer is not used anywhere)
-    TCCR0B = _BV(CS00); /* NOTE: Specified again below with FOC0x bits */
 }
 
 void motorOutputPPM(struct MT_STATE_S *state){
@@ -333,21 +352,6 @@ void motorOutputPPM(struct MT_STATE_S *state){
         // Form mask which will be applied to ports in ISR
         motors_list[i].portb_mask = motorGetPorbMask(sort_result[i]);
         motors_list[i].portd_mask = motorGetPordMask(sort_result[i]);
-
-        // Reuse M5 if it's not required by copter configuration
-#if !M5_USED
-        if (sort_result[i] == 2) {
-            motors_list[i].portb_mask |= motorGetPorbMask(4);
-            motors_list[i].portd_mask |= motorGetPordMask(4);
-        }
-#endif
-        // Reuse M6 if it's not required by copter configuration
-#if !M6_USED
-        if (sort_result[i] == 3) {
-            motors_list[i].portb_mask |= motorGetPorbMask(4);
-            motors_list[i].portd_mask |= motorGetPordMask(5);
-        }
-#endif
 
         // Here comes magic
         if (i != (MOTOR_COUNT - 1) &&
