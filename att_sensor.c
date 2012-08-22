@@ -57,13 +57,21 @@ void attISR(bool state) {
 void attInit(void) {
     ATT_TRIG_DIR = OUTPUT;
     ATT_ECHO_DIR = INPUT;
-}
 
-// Triggers measurement. Care must be taken about measurement frequency allowed
-void attTrigger(void) {
-    ATT_TRIG = 1;
-    _delay_us(10);
-    ATT_TRIG = 0;
+    /*
+     * Initialize Timer0 to continuously trigger attitude sensor
+     *  (128us pulse every 32ms - 31.25Hz)
+     */
+    // Fast PWM mode, generate non-inverting output on OC0A
+    TCCR0A = _BV(COM0A1) | _BV(WGM01) | _BV(WGM00);
+    // Single-clock (128us) positive pulse at each overflow
+    OCR0A = 1;
+#if T0_FREQ == F_CPU / 1024
+    // Clock is F_CPU / 1024
+    TCCR0B = _BV(CS02) | _BV(CS00);
+#else
+#error "Unsupported Timer0 configuration"
+#endif
 }
 
 // Returns measured distance in millimeters

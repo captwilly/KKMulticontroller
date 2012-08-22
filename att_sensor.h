@@ -14,10 +14,9 @@
 /******************************************************************************
  ***    Defines                                                             ***
  ******************************************************************************/
-// Minimal recommended period for measurements
-#define ATT_MEAS_PERIOD_MS  60
-// and it's corresponding frequency
-#define ATT_RATE            (1000/ATT_MEAS_PERIOD_MS)
+#define T0_FREQ             (8000000 / 1024)
+// Actual attitude measurement rate (freq / 2^(timer width))
+#define ATT_RATE            (T0_FREQ / 256)
 
 
 /******************************************************************************
@@ -26,7 +25,6 @@
 // Call only under disabled interrupts
 void attISR(bool state);
 void attInit(void);
-void attTrigger(void);
 uint16_t attGetDistance(void);
 
 #endif // !defined(ATT_SENSOR_H_) && defined(ATTITUDE_SENSOR)

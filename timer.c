@@ -1,8 +1,8 @@
 /*
  * Filename:    timer.c
  * Description: this module provides 32bit timer using 16 bit hardware
- *  implementation Timer1. Module Also initializes additional timers (Timer0 and
- *  Timer2) and provides defines (T0_FREQ and T2_FREQ) for its frequencies.
+ *  implementation Timer1. Module Also initializes additional timer (Timer2) and
+ *  provides define (T2_FREQ) for its frequency.
  *
  *  Created on: Aug 21, 2012
  *      Author: dart
@@ -31,14 +31,6 @@ ISR(TIMER1_OVF_vect) {
  ***    Public functions                                                    ***
  ******************************************************************************/
 void timerInit(void){
-    // TODO: remove timer0 initialization (make sure timer is not used anywhere)
-#if T0_FREQ == F_CPU
-    TCCR0B = _BV(CS00); /* NOTE: Specified again below with FOC0x bits */
-#else
-#error "Unsupported Timer0 configuration"
-#endif
-
-
     // Clear interrupt flag (just for case)
     TIFR1 |= _BV(TOV1);
     // Enable overflow interrupt

@@ -200,7 +200,7 @@ static inline void main_loop() {
 
 #ifdef ATTITUDE_SENSOR
             // Get Attitude
-            
+
             static uint8_t att_skip = 0;
             // Attitude in millimeters
             static uint16_t attitude = 0;
@@ -209,14 +209,16 @@ static inline void main_loop() {
 
             /* Attitude sensor work frequency is lower than ESC frequency
              *  so skip couple iterations here */
+            /* TODO: while it is not necessary now (with automatic hardware
+             *  sensor triggering) removing this skip will affect derivative
+             *  calculation, so not removing it until better attitude regulation
+             *  algorithm will be developed */
             if(att_skip++ == ESC_RATE / ATT_RATE){
                 att_skip = 0;
 
                 uint16_t attitude_curr = attGetDistance();
                 attitude_diff = attitude_curr - attitude;
                 attitude = attitude_curr;
-                // Trig next measurement
-                attTrigger();
             }
 #endif
 
