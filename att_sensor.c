@@ -37,6 +37,8 @@ static volatile uint32_t distance;
  ***    Interrupt service routines                                          ***
  ******************************************************************************/
 // Call only under disabled interrupts
+/* TODO: rework this to Timer1 Input Capture (should decrease interrupt latency
+ *  and simplify processing) */
 void attISR(bool state) {
     static uint32_t last_time;
 
