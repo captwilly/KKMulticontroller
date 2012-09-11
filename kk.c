@@ -31,6 +31,13 @@ static void setup(void);
 static void main_loop(void);
 int main(void);
 
+#ifdef ATTITUDE_SENSOR
+struct PID_STATE_S {
+    int16_t last_err;
+    int16_t derivative;
+    int32_t integral;
+};
+#endif
 
 static void setup() {
     struct GYRO_GAIN_ADC_S pots;
@@ -138,6 +145,12 @@ static inline void main_loop() {
     struct GYRO_STATE_S integral = {.yaw = 0};   // PID integral term
     struct GYRO_STATE_S last_error = {.yaw = 0}; // Last proportional error
 
+#ifdef ATTITUDE_SENSOR
+    int32_t att_aim = 0;
+    struct PID_STATE_S att_pid = {0, 0, 0};
+#endif
+
+
     FOREVER {
 
         LED_WRITE(Armed);
@@ -167,8 +180,10 @@ static inline void main_loop() {
             // TODO: get rid of magic numbers
             if (Change_Arming > 0x0F42) {
                 Armed = !Armed;
-                if (Armed)
+                if (Armed) {
+                	memset(&att_pid, 0, sizeof(struct PID_STATE_S));
                     gyrosCalibrate();
+                }
             }
 
 #ifndef NOT_ARMED_ESC_SIGNAL
@@ -201,25 +216,23 @@ static inline void main_loop() {
 #ifdef ATTITUDE_SENSOR
             // Get Attitude
 
-            static uint8_t att_skip = 0;
-            // Attitude in millimeters
-            static uint16_t attitude = 0;
-            // and it's derivative
-            static int16_t attitude_diff = 0;
+//            // Change stabilization attitude if needed
+//            // att_aim variable carries aimed attitude multiplied by 512
+//            att_aim += rxState.collective;
+//            att_aim = MIN(ATTITUDE_MAX << 9, att_aim);
+//            att_aim = MAX(ATTITUDE_MIN << 9, att_aim);
+//
+////            uint16_t att_aim_mm = att_aim >> 9;
 
-            /* Attitude sensor work frequency is lower than ESC frequency
-             *  so skip couple iterations here */
-            /* TODO: while it is not necessary now (with automatic hardware
-             *  sensor triggering) removing this skip will affect derivative
-             *  calculation, so not removing it until better attitude regulation
-             *  algorithm will be developed */
-            if(att_skip++ == ESC_RATE / ATT_RATE){
-                att_skip = 0;
+            att_aim = (rxState.collective - 50) * 3;
 
-                uint16_t attitude_curr = attGetDistance();
-                attitude_diff = attitude_curr - attitude;
-                attitude = attitude_curr;
-            }
+            // Calculate attitude error
+            int16_t att_err = att_aim - attGetDistance();
+
+            att_pid.derivative = att_err - att_pid.last_err;
+            att_pid.integral += att_err;
+            att_pid.last_err = att_err;
+
 #endif
 
             // Start mixing
@@ -228,25 +241,25 @@ static inline void main_loop() {
             imax >>= 3; /* 1000 -> 200 */
 
             /* Calculate roll output - Test without props!! */
-            rxState.roll = ((int32_t) rxState.roll * (uint32_t) pots.roll)
+            rxState.roll = ((int32_t) rxState.roll * (uint32_t) 330)
                     >> STICK_GAIN_SHIFT;
-            gyro.roll = ((int32_t) gyro.roll * (uint32_t) pots.roll)
+            gyro.roll = ((int32_t) gyro.roll * (uint32_t) 330)
                     >> GYRO_GAIN_SHIFT;
             rxState.roll -= gyro.roll;
 
 
             /* Calculate pitch output - Test without props!! */
-            rxState.pitch = ((int32_t) rxState.pitch * (uint32_t) pots.pitch)
+            rxState.pitch = ((int32_t) rxState.pitch * (uint32_t) 330)
                     >> STICK_GAIN_SHIFT;
-            gyro.pitch = ((int32_t) gyro.pitch * (uint32_t) pots.pitch)
+            gyro.pitch = ((int32_t) gyro.pitch * (uint32_t) 330)
                     >> GYRO_GAIN_SHIFT;
             rxState.pitch -= gyro.pitch;
 
 
             /* Calculate yaw output - Test without props!! */
-            rxState.yaw = ((int32_t) rxState.yaw * (uint32_t) pots.yaw)
+            rxState.yaw = ((int32_t) rxState.yaw * (uint32_t) 1023)
                     >> STICK_GAIN_SHIFT;
-            gyro.yaw = ((int32_t) gyro.yaw * (uint32_t) pots.yaw)
+            gyro.yaw = ((int32_t) gyro.yaw * (uint32_t) 1023)
                     >> GYRO_GAIN_SHIFT;
 
             error = rxState.yaw - gyro.yaw;
@@ -337,10 +350,28 @@ static inline void main_loop() {
 
 #ifdef ATTITUDE_SENSOR
 			// Apply attitde correction
-            motors.m1out = 1000 - attitude - 4 * attitude_diff;
-            motors.m2out = 1000 - attitude - 4 * attitude_diff;
-            motors.m3out = 1000 - attitude - 4 * attitude_diff;
-            motors.m4out = 1000 - attitude - 4 * attitude_diff;
+//            motors.m1out = 1000 - att_real - 4 * att_diff;
+//            motors.m2out = 1000 - att_real - 4 * att_diff;
+//            motors.m3out = 1000 - att_real - 4 * att_diff;
+//            motors.m4out = 1000 - att_real - 4 * att_diff;
+
+//            motors.m1out = att_aim_mm >> 2;
+//            motors.m2out = att_aim_mm >> 2;
+//            motors.m3out = att_aim_mm >> 2;
+//            motors.m4out = att_aim_mm >> 2;
+
+            int16_t collective =
+                    // P-term (Yaw potentiometer)
+                    (((int32_t)att_pid.last_err * pots.yaw) / 512) +
+                    // I-term (Pitch potentiometer)
+                    (((int32_t)att_pid.integral * (pots.pitch >> 4)) >> 17) +
+                    // D-term (Roll potentiometer)
+                    ((int32_t)att_pid.derivative * pots.roll / 8);
+
+            motors.m1out = collective;
+            motors.m2out = collective;
+            motors.m3out = collective;
+            motors.m4out = collective;
 #else
             motors.m1out = rxState.collective;
             motors.m2out = rxState.collective;
