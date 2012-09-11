@@ -33,7 +33,7 @@
 //#define GAIN_POT_REVERSE
 
 // Gyro gain shift-right (after 32-bit multiplication of GYRO_GAIN_ADC_S value).
-#define GYRO_GAIN_SHIFT 5
+#define GYRO_GAIN_SHIFT 3
 
 // Skip yaw gyro calculations if using external yaw gyro
 //#define EXTERNAL_YAW_GYRO
@@ -57,7 +57,7 @@
 #define STICK_THROW 300
 
 // Stick gain shift-right (after 32-bit multiplication of GYRO_GAIN_ADC_S value).
-#define STICK_GAIN_SHIFT 8
+#define STICK_GAIN_SHIFT 9
 
 // Max Collective
 // limits the maximum stick collective (range 80->100  100=Off)
@@ -71,6 +71,6 @@
 //#define NOT_ARMED_ESC_SIGNAL
 
 // Use HS-SR04 ultrasonic attitude sensor
-//#define ATTITUDE_SENSOR
+#define ATTITUDE_SENSOR
 
 #endif /* CONFIG_H_ */
