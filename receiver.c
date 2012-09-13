@@ -172,14 +172,29 @@ void receiverStickCenterAutomatic(void) {
     struct RX_STATE_S rx;
     settingsRead(&settings);
 
-    receiverGetChannelsClean(&rx);
+
+    // Get average for 32 measurements and use it as zero offset
+    uint32_t roll_tmp = 0;
+    uint32_t pitch_tmp = 0;
+    uint32_t yaw_tmp = 0;
+    uint32_t coll_tmp = 0;
+
+    for(uint8_t i = 0; i < 32; i++) {
+        receiverGetChannelsClean(&rx);
+
+        roll_tmp += rx.roll;
+        pitch_tmp += rx.pitch;
+        yaw_tmp += rx.yaw;
+        coll_tmp += rx.collective;
+
+        _delay_ms(60);
+    }
 
     // This will be final value for zero offset
-    // TODO: get average of couple readings
-    settings.RxRollZero = rx.roll;
-    settings.RxPitchZero = rx.pitch;
-    settings.RxYawZero = rx.yaw;
-    settings.RxCollectiveZero = rx.collective;
+    settings.RxRollZero = roll_tmp >> 5;
+    settings.RxPitchZero = pitch_tmp >> 5;
+    settings.RxYawZero = yaw_tmp >> 5;
+    settings.RxCollectiveZero = coll_tmp >> 5;
 
     // Initial value for max and min
     settings.RxRollMax = settings.RxRollZero;
