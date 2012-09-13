@@ -73,4 +73,11 @@
 // Use HS-SR04 ultrasonic attitude sensor
 #define ATTITUDE_SENSOR
 
+// Use Low-Pass Filter for throttle channel
+#define THROTTLE_LPF
+
+#ifdef THROTTLE_LPF
+#define THROTTLE_LPF_FILTER_PARAM   256
+#endif
+
 #endif /* CONFIG_H_ */

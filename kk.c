@@ -149,6 +149,9 @@ static inline void main_loop() {
     int32_t att_aim = 0;
     struct PID_STATE_S att_pid = {0, 0, 0};
 #endif
+#ifdef THROTTLE_LPF
+    int32_t rxCollective_prev = 0;
+#endif
 
 
     FOREVER {
@@ -156,6 +159,13 @@ static inline void main_loop() {
         LED_WRITE(Armed);
 
         receiverGetChannels(&rxState);
+#ifdef THROTTLE_LPF
+        int16_t tmp = rxState.collective;
+        rxState.collective =
+                (((int32_t)rxCollective_prev * (THROTTLE_LPF_FILTER_PARAM - 1)) +
+                        rxState.collective) / THROTTLE_LPF_FILTER_PARAM;
+        rxCollective_prev = tmp;
+#endif
 
         if (rxState.collective <= 50) {
             // Check for stick arming (Timer2 at 8MHz/1024 = 7812.5KHz)
@@ -183,6 +193,9 @@ static inline void main_loop() {
                 if (Armed) {
                 	memset(&att_pid, 0, sizeof(struct PID_STATE_S));
                     gyrosCalibrate();
+#ifdef THROTTLE_LPF
+                    rxCollective_prev = 0;
+#endif
                 }
             }
 
@@ -362,11 +375,11 @@ static inline void main_loop() {
 
             int16_t collective =
                     // P-term (Yaw potentiometer)
-                    (((int32_t)att_pid.last_err * pots.yaw) / 512) +
+                    (((int32_t)att_pid.last_err * pots.yaw) / 1024) +
                     // I-term (Pitch potentiometer)
-                    (((int32_t)att_pid.integral * (pots.pitch >> 4)) >> 17) +
+                    (((int32_t)att_pid.integral * (pots.pitch >> 4)) >> 16) +
                     // D-term (Roll potentiometer)
-                    ((int32_t)att_pid.derivative * pots.roll / 8);
+                    ((int32_t)att_pid.derivative * pots.roll / 4);
 
             motors.m1out = collective;
             motors.m2out = collective;
