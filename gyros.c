@@ -4,8 +4,8 @@
 #include "settings.h"
 #include "adc.h"
 #include "led.h"
+#include "delay.h"
 #include <string.h>
-#include <util/delay.h>
 
 /*** BEGIN VARIABLES ***/
 static struct GYRO_STATE_S gyroZeroPoint;
@@ -129,7 +129,7 @@ void gyrosReverse(void) {
             LED_ON();
         }
 
-        _delay_ms(50);
+        delay_ms(50);
         LED_OFF();
     }
 }

@@ -3,9 +3,9 @@
 #include "settings.h"
 #include "led.h"
 #include "att_sensor.h"
+#include "delay.h"
 #include <stdlib.h>
 #include <util/atomic.h>
-#include <util/delay.h>
 
 /*** BEGIN VARIABLES ***/
 static volatile uint16_t RxChannel1;
@@ -162,9 +162,9 @@ void receiverStickCenterManual(void) {
         i = i / 4;
         i = i >= 25 ? 25 : i;
         LED_ON();
-        _delay_ms(25 - i);
+        delay_ms(25 - i);
         LED_OFF();
-        _delay_ms(i);
+        delay_ms(i);
     }
 }
 
@@ -229,7 +229,7 @@ void receiverStickCenterAutomatic(void) {
         LED_INVERT();
         /* Wait enough time for Rx data to update (60ms should be enough
          *  considering that receiver gives pulse every 50ms) */
-        _delay_ms(60);
+        delay_ms(60);
     }
 
     // Scale zero offset

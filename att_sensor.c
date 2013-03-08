@@ -12,8 +12,8 @@
 #ifdef ATTITUDE_SENSOR
 
 #include "timer.h"
+#include "delay.h"
 #include <util/atomic.h>
-#include <util/delay.h>
 
 
 /******************************************************************************
@@ -62,7 +62,7 @@ void attInit(void) {
 // Triggers measurement. Care must be taken about measurement frequency allowed
 void attTrigger(void) {
     ATT_TRIG = 1;
-    _delay_us(10);
+    delay_us(10);
     ATT_TRIG = 0;
 }
 

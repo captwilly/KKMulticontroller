@@ -7,8 +7,8 @@
 #include "led.h"
 #include "timer.h"
 #include "att_sensor.h"
+#include "delay.h"
 #include <stdlib.h>
-#include <util/delay.h>
 #include <avr/interrupt.h>
 #include <string.h>
 
@@ -54,7 +54,7 @@ static void setup() {
 
     sei();
 
-    _delay_ms(1500);
+    delay_ms(1500);
 
     gyrosReadGainPots(&pots);
     // 5% threshold
