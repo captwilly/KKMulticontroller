@@ -136,7 +136,7 @@ static inline void main_loop() {
     struct GYRO_GAIN_ADC_S pots;
     struct GYRO_STATE_S gyro;
     struct GYRO_STATE_S integral = {.yaw = 0};   // PID integral term
-    struct GYRO_STATE_S last_error = {.yaw = 0}; // Last proportional error
+    struct GYRO_STATE_S last_value = {.yaw = 0}; // Last proportional value
 
     FOREVER {
 
@@ -257,8 +257,8 @@ static inline void main_loop() {
                 integral.yaw = imax;
             else if (integral.yaw < -imax)
                 integral.yaw = -imax;
-            derivative = error - last_error.yaw;
-            last_error.yaw = error;
+            derivative = gyro.yaw - last_value.yaw;
+            last_value.yaw = gyro.yaw;
             rxState.yaw += error + (integral.yaw >> 4) + (derivative >> 4);
 
 
