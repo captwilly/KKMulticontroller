@@ -135,8 +135,8 @@ static inline void main_loop() {
     struct RX_STATE_S rxState;
     struct GYRO_GAIN_ADC_S pots;
     struct GYRO_STATE_S gyro;
-    struct GYRO_STATE_S integral = {.yaw = 0};   // PID integral term
-    struct GYRO_STATE_S last_value = {.yaw = 0}; // Last proportional value
+    struct GYRO_STATE_S integral = {.yaw = 0, .pitch = 0, .roll = 0};   // PID integral term
+    struct GYRO_STATE_S last_value = {.yaw = 0, .pitch = 0, .roll = 0}; // Last value
 
     FOREVER {
 
@@ -230,16 +230,42 @@ static inline void main_loop() {
                     >> STICK_GAIN_SHIFT;
             gyro.roll = ((int32_t) gyro.roll * (uint32_t) pots.roll)
                     >> GYRO_GAIN_SHIFT;
-            rxState.roll -= gyro.roll;
+            //rxState.roll -= gyro.roll;
 
+            error = rxState.roll - gyro.roll;
+            if (error > emax)
+              error = emax;
+            else if (error < -emax)
+              error = -emax;
+            integral.roll += error;
+            if (integral.roll > imax)
+                integral.roll = imax;
+            else if (integral.roll < -imax)
+                integral.roll = -imax;
+            derivative = gyro.roll - last_value.roll;
+            last_value.roll = gyro.roll;
+            rxState.roll += error + (integral.roll >> 4) + (derivative >> 4);
 
             /* Calculate pitch output - Test without props!! */
             rxState.pitch = ((int32_t) rxState.pitch * (uint32_t) pots.pitch)
                     >> STICK_GAIN_SHIFT;
             gyro.pitch = ((int32_t) gyro.pitch * (uint32_t) pots.pitch)
                     >> GYRO_GAIN_SHIFT;
-            rxState.pitch -= gyro.pitch;
+            //rxState.pitch -= gyro.pitch;
 
+            error = rxState.pitch - gyro.pitch;
+            if (error > emax)
+              error = emax;
+            else if (error < -emax)
+              error = -emax;
+            integral.pitch += error;
+            if (integral.pitch > imax)
+                integral.pitch = imax;
+            else if (integral.pitch < -imax)
+                integral.pitch = -imax;
+            derivative = gyro.pitch - last_value.pitch;
+            last_value.pitch = gyro.pitch;
+            rxState.pitch += error + (integral.pitch >> 4) + (derivative >> 4);
 
             /* Calculate yaw output - Test without props!! */
             rxState.yaw = ((int32_t) rxState.yaw * (uint32_t) pots.yaw)
@@ -260,7 +286,6 @@ static inline void main_loop() {
             derivative = gyro.yaw - last_value.yaw;
             last_value.yaw = gyro.yaw;
             rxState.yaw += error + (integral.yaw >> 4) + (derivative >> 4);
-
 
             // Apply calculation results to motors output
 #ifdef SINGLE_COPTER
