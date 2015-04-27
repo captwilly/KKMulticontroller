@@ -225,11 +225,17 @@ static inline void main_loop() {
             imax = MAX(rxState.collective, 0);
             imax >>= 3; /* 1000 -> 200 */
 
+            int16_t roll = (int16_t)((int32_t) gyro.roll * (uint32_t) pots.roll) >> GYRO_GAIN_SHIFT;
+            int16_t pitch = (int16_t)((int32_t) gyro.pitch * (uint32_t) pots.pitch) >> GYRO_GAIN_SHIFT;
+
             /* Calculate roll output - Test without props!! */
             rxState.roll = ((int32_t) rxState.roll * (uint32_t) pots.roll)
-                    >> STICK_GAIN_SHIFT;
-            gyro.roll = ((int32_t) gyro.roll * (uint32_t) pots.roll)
-                    >> GYRO_GAIN_SHIFT;
+                                >> STICK_GAIN_SHIFT;
+#ifdef ROTATE_45
+            gyro.roll = (int16_t)(((int32_t)roll * 10 / 7) + ((int32_t)pitch * 10 / 7));
+#else
+            gyro.roll = roll;
+#endif
             //rxState.roll -= gyro.roll;
 
             error = rxState.roll - gyro.roll;
@@ -247,10 +253,13 @@ static inline void main_loop() {
             rxState.roll += error + (integral.roll >> 4) + (derivative >> 4);
 
             /* Calculate pitch output - Test without props!! */
-            rxState.pitch = ((int32_t) rxState.pitch * (uint32_t) pots.pitch)
-                    >> STICK_GAIN_SHIFT;
-            gyro.pitch = ((int32_t) gyro.pitch * (uint32_t) pots.pitch)
-                    >> GYRO_GAIN_SHIFT;
+            rxState.pitch = -((int32_t) rxState.pitch * (uint32_t) pots.pitch)
+                                >> STICK_GAIN_SHIFT;
+#ifdef ROTATE_45
+            gyro.pitch = (int16_t)(((int32_t)roll * -10 / 7) + ((int32_t)pitch * 10 / 7));
+#else
+            gyro.pitch = pitch;
+#endif
             //rxState.pitch -= gyro.pitch;
 
             error = rxState.pitch - gyro.pitch;

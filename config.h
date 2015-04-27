@@ -29,6 +29,8 @@
 //#define Y6_COPTER
 #endif
 
+// Use this to rotate the controller 45 degrees so that all 3 gyros are forward instead of just the one
+#define ROTATE_45
 
 //#define GAIN_POT_REVERSE
 

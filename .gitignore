@@ -14,3 +14,4 @@
 .settings/
 build/
 eep.bin
+/Release/
