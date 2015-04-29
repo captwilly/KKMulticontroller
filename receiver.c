@@ -20,7 +20,7 @@ static struct SETTINGS_S settings;
 // NOTE: we can save average 4 tacts rewriting those in assembly
 ISR(PCINT2_vect) {
     static volatile uint16_t RxChannel1Start;
-#ifdef ATTITUDE_SENSOR
+#if defined(ATTITUDE_SENSOR) && !defined(RX_CONFIG)
     static bool prev_roll;
     static bool prev_echo;
 
@@ -35,7 +35,7 @@ ISR(PCINT2_vect) {
         } else { // falling
             RxChannel1 = TCNT1 - RxChannel1Start;
         }
-#ifdef ATTITUDE_SENSOR
+#if defined(ATTITUDE_SENSOR) && !defined(RX_CONFIG)
     }
     bool new_echo = ATT_ECHO;
     if(new_echo != prev_echo) {
@@ -91,7 +91,7 @@ void receiverSetup() {
     PCMSK0 = _BV(PCINT7); // PB7
     PCMSK2 = _BV(PCINT17); // PD1
 
-#ifdef ATTITUDE_SENSOR
+#if defined(ATTITUDE_SENSOR) && !defined(RX_CONFIG)
     PCMSK2 |= _BV(PCINT21); // PD5
 #endif
 

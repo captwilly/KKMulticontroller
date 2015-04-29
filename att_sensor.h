@@ -8,7 +8,7 @@
 #include "common.h"
 
 // Don't define anything unless we have attitude sensor enabled
-#if !defined(ATT_SENSOR_H_) && defined(ATTITUDE_SENSOR)
+#if !defined(ATT_SENSOR_H_) && defined(ATTITUDE_SENSOR) && !defined(RX_CONFIG)
 #define ATT_SENSOR_H_
 
 /******************************************************************************

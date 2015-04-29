@@ -9,7 +9,7 @@
 #include "att_sensor.h"
 
 // Don'n compile anything unless attitude sensor support is enabled
-#ifdef ATTITUDE_SENSOR
+#if defined(ATTITUDE_SENSOR) && !defined(RX_CONFIG)
 
 #include "timer.h"
 #include "delay.h"

@@ -43,7 +43,7 @@ static void setup() {
     receiverSetup();
     gyrosSetup();
     motorsSetup();
-#ifdef ATTITUDE_SENSOR
+#if defined(ATTITUDE_SENSOR) && !defined(RX_CONFIG)
     attInit();
 #endif
 
@@ -198,7 +198,7 @@ static inline void main_loop() {
             gyrosRead(&gyro);
             gyrosReadGainPots(&pots);
 
-#ifdef ATTITUDE_SENSOR
+#if defined(ATTITUDE_SENSOR) && !defined(RX_CONFIG)
             // Get Attitude
             
             static uint8_t att_skip = 0;
@@ -367,7 +367,7 @@ static inline void main_loop() {
             motors.m4out += SERVO_REVERSE_SIGN rxState.yaw;
 #elif defined(QUAD_COPTER)
 
-#ifdef ATTITUDE_SENSOR
+#if defined(ATTITUDE_SENSOR) && !defined(RX_CONFIG)
 			// Apply attitde correction
             motors.m1out = 1000 - attitude - 4 * attitude_diff;
             motors.m2out = 1000 - attitude - 4 * attitude_diff;

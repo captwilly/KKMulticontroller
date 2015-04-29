@@ -72,6 +72,9 @@
 // Define if you don't want your ESC to beep in not armed mode
 //#define NOT_ARMED_ESC_SIGNAL
 
+//Use this to convert motor 5 & 6 into access for configs
+#define RX_CONFIG
+
 // Use HS-SR04 ultrasonic attitude sensor
 //#define ATTITUDE_SENSOR
 
